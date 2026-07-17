@@ -7,3 +7,10 @@ export const tasks = [
 export function getTaskById(id) {
     return tasks.find((task) => task.id === id);
 }
+
+export function addTask(title) {
+    const nextId = tasks.reduce((max, task) => Math.max(max, task.id), 0) + 1;
+    const task = { id: nextId, title, done: false };
+    tasks.push(task);
+    return task;
+}
