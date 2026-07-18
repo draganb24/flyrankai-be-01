@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Task API
 
-## Getting Started
+A tiny, deliberately small JSON API for managing a to-do list — built with
+[Next.js](https://nextjs.org) (App Router) and documented live with Swagger UI.
+It exists to teach the shape of an API: routes, HTTP methods, status codes, and
+request/response bodies — all in one folder you can read top to bottom.
 
-First, run the development server:
+The whole thing is in-memory (no database): data resets to a 3-item seed list
+every time the server restarts. That is on purpose — it keeps the focus on the
+API, not persistence.
+
+## What's inside
+
+| File | Purpose |
+| --- | --- |
+| `app/tasks/route.js` | `GET` (list) and `POST` (create) for `/tasks` |
+| `app/tasks/[id]/route.js` | `GET` / `PUT` / `DELETE` for a single task |
+| `app/lib/tasks.js` | In-memory task store and helpers |
+| `openapi.json` | OpenAPI 3.0 description of every endpoint |
+| `server.mjs` | Custom server: mounts Swagger UI at `/docs`, forwards the rest to Next.js |
+| `docs/swagger-ui.png` | Screenshot of the Swagger UI (see below) |
+
+## Install & run
+
+Requires [Node.js](https://nodejs.org) 18+.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install && npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **API root / health:** http://localhost:3000
+- **Swagger UI (interactive docs):** http://localhost:3000/docs
+- **Raw OpenAPI spec:** http://localhost:3000/openapi.json
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+In Swagger UI, click **Try it out** on any endpoint and hit **Execute** — no
+`curl` needed. The server, docs, and requests all live on the same origin, so
+"Try it out" just works.
 
-## Learn More
+> Production build: `npm run build && npm start`.
 
-To learn more about Next.js, take a look at the following resources:
+## Endpoints
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Base URL: `http://localhost:3000`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Method | Path | Description | Success | Errors |
+| --- | --- | --- | --- | --- |
+| `GET` | `/tasks` | List all tasks | `200` + JSON array | — |
+| `POST` | `/tasks` | Create a task (body: `{ "title": "string" }`) | `201` + the new task | `400` if title missing/empty |
+| `GET` | `/tasks/{id}` | Get one task by id | `200` + the task | `404` if not found |
+| `PUT` | `/tasks/{id}` | Update title and/or `done` (`{ "title"?, "done"? }`) | `200` + updated task | `400` / `404` |
+| `DELETE` | `/tasks/{id}` | Delete a task | `204` (no body) | `404` if not found |
 
-## Deploy on Vercel
+### Task shape
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```json
+{ "id": 1, "title": "Learn what an API is", "done": true }
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Example: create a task
+
+```bash
+curl -i -X POST http://localhost:3000/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Try the README example"}'
+```
+
+```http
+HTTP/1.1 201 Created
+X-Powered-By: Express
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+content-type: application/json
+Date: Sat, 18 Jul 2026 13:50:06 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+
+{"id":4,"title":"Try the README example","done":false}
+```
+
+## Swagger UI
+
+![Swagger UI for the Task API](docs/swagger-ui.png)
+
+All five endpoints are documented in `openapi.json` and rendered as interactive
+documentation at `/docs`. The screenshot above shows the full list; each row
+expands to show parameters, request body, and every response code.
+
+---
+
+## Resources
+
+1. **HTTP methods** — https://developer.mozilla.org/docs/Web/HTTP/Methods
+2. **HTTP status codes** — https://developer.mozilla.org/docs/Web/HTTP/Status
+3. **JSON** — https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/JSON
+4. **Next.js App Router** — https://nextjs.org/docs/app
+5. **Route Handlers (API routes)** — https://nextjs.org/docs/app/building-your-application/routing/route-handlers
+6. **OpenAPI 3.0 spec** — https://spec.openapis.org/oas/v3.0.3
+7. **Swagger UI** — https://swagger.io/tools/swagger-ui/
+8. **swagger-ui-express** — https://www.npmjs.com/package/swagger-ui-express
+9. **Git & GitHub basics** — https://docs.github.com/get-started/quickstart
+
+   Init → add → commit → push, in one mental model:
+
+   ```bash
+   git init            # one time, turns a folder into a repo
+   git add .           # stage changes (or name files: git add README.md)
+   git commit -m "msg" # save a snapshot with a message
+   git push            # send commits to GitHub (after git remote add origin <url>)
+   ```
+
+   Next week's live session covers this properly — branches, pull requests, and
+   how teams review work.
