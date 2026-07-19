@@ -85,6 +85,13 @@ Transfer-Encoding: chunked
 
 ![Swagger UI for the Task API](docs/swagger-ui.png)
 
-All five endpoints are documented in `openapi.json` and rendered as interactive
+All endpoints are documented in `openapi.json` and rendered as interactive
 documentation at `/docs`. The screenshot above shows the full list; each row
 expands to show parameters, request body, and every response code.
+
+## Mortality experiment
+
+Create a few tasks, then restart the server and `GET /tasks`: the new tasks are
+gone, and only the 3 seed tasks remain. That is because tasks live in memory
+(`app/lib/tasks.js` holds them in a plain array), so they vanish the moment the
+process exits — nothing is ever written to a database or file.
