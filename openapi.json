@@ -211,6 +211,38 @@
           }
         }
       }
+    },
+    "/stats": {
+      "get": {
+        "summary": "Task statistics",
+        "description": "Returns counts computed from the current task list: total tasks, how many are done, and how many are still open.",
+        "responses": {
+          "200": {
+            "description": "Task counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "example": 7
+                    },
+                    "done": {
+                      "type": "integer",
+                      "example": 3
+                    },
+                    "open": {
+                      "type": "integer",
+                      "example": 4
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
