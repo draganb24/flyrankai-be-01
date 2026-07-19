@@ -2,8 +2,15 @@ import { tasks, addTask } from '../lib/tasks';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-    return Response.json(tasks);
+export async function GET(request) {
+    const raw = request.nextUrl.searchParams.get('done');
+
+    if (raw !== 'true' && raw !== 'false') {
+        return Response.json(tasks);
+    }
+
+    const done = raw === 'true';
+    return Response.json(tasks.filter((task) => task.done === done));
 }
 
 export async function POST(request) {

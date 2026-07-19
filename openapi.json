@@ -15,7 +15,18 @@
     "/tasks": {
       "get": {
         "summary": "List all tasks",
-        "description": "Returns the full list of tasks currently stored in memory.",
+        "description": "Returns the full list of tasks currently stored in memory. Use the optional `done` query parameter to filter: `GET /tasks?done=true` returns only finished tasks, `?done=false` only unfinished ones.",
+        "parameters": [
+          {
+            "name": "done",
+            "in": "query",
+            "required": false,
+            "description": "Filter by completion status. `true` = only finished tasks, `false` = only unfinished tasks. Omit to return all tasks.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "An array of tasks",

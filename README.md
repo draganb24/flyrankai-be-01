@@ -46,7 +46,7 @@ Base URL: `http://localhost:3000`
 
 | Method | Path | Description | Success | Errors |
 | --- | --- | --- | --- | --- |
-| `GET` | `/tasks` | List all tasks | `200` + JSON array | — |
+| `GET` | `/tasks` | List all tasks. Add `?done=true` (finished only) or `?done=false` (unfinished only) to filter | `200` + JSON array | — |
 | `POST` | `/tasks` | Create a task (body: `{ "title": "string" }`) | `201` + the new task | `400` if title missing/empty |
 | `GET` | `/tasks/{id}` | Get one task by id | `200` + the task | `404` if not found |
 | `PUT` | `/tasks/{id}` | Update title and/or `done` (`{ "title"?, "done"? }`) | `200` + updated task | `400` / `404` |
