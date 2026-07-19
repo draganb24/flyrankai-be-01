@@ -3,14 +3,25 @@ import { tasks, addTask } from '../lib/tasks';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
-    const raw = request.nextUrl.searchParams.get('done');
+    const { searchParams } = request.nextUrl;
+    const rawDone = searchParams.get('done');
+    const search = searchParams.get('search');
 
-    if (raw !== 'true' && raw !== 'false') {
-        return Response.json(tasks);
+    let result = tasks;
+
+    if (rawDone === 'true' || rawDone === 'false') {
+        const done = rawDone === 'true';
+        result = result.filter((task) => task.done === done);
     }
 
-    const done = raw === 'true';
-    return Response.json(tasks.filter((task) => task.done === done));
+    if (search) {
+        const needle = search.toLowerCase();
+        result = result.filter((task) =>
+            task.title.toLowerCase().includes(needle)
+        );
+    }
+
+    return Response.json(result);
 }
 
 export async function POST(request) {

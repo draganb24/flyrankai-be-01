@@ -15,7 +15,7 @@
     "/tasks": {
       "get": {
         "summary": "List all tasks",
-        "description": "Returns the full list of tasks currently stored in memory. Use the optional `done` query parameter to filter: `GET /tasks?done=true` returns only finished tasks, `?done=false` only unfinished ones.",
+        "description": "Returns the full list of tasks currently stored in memory. Optional query parameters: `?done=true` returns only finished tasks, `?done=false` only unfinished ones; `?search=milk` returns tasks whose title contains the word (case-insensitive). Both can be combined.",
         "parameters": [
           {
             "name": "done",
@@ -24,6 +24,15 @@
             "description": "Filter by completion status. `true` = only finished tasks, `false` = only unfinished tasks. Omit to return all tasks.",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Case-insensitive substring match on the task title. `?search=milk` returns only tasks whose title contains \"milk\".",
+            "schema": {
+              "type": "string"
             }
           }
         ],

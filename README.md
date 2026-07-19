@@ -11,14 +11,14 @@ API, not persistence.
 
 ## What's inside
 
-| File | Purpose |
-| --- | --- |
-| `app/tasks/route.js` | `GET` (list) and `POST` (create) for `/tasks` |
-| `app/tasks/[id]/route.js` | `GET` / `PUT` / `DELETE` for a single task |
-| `app/lib/tasks.js` | In-memory task store and helpers |
-| `openapi.json` | OpenAPI 3.0 description of every endpoint |
-| `server.mjs` | Custom server: mounts Swagger UI at `/docs`, forwards the rest to Next.js |
-| `docs/swagger-ui.png` | Screenshot of the Swagger UI (see below) |
+| File                      | Purpose                                                                   |
+|---------------------------|---------------------------------------------------------------------------|
+| `app/tasks/route.js`      | `GET` (list) and `POST` (create) for `/tasks`                             |
+| `app/tasks/[id]/route.js` | `GET` / `PUT` / `DELETE` for a single task                                |
+| `app/lib/tasks.js`        | In-memory task store and helpers                                          |
+| `openapi.json`            | OpenAPI 3.0 description of every endpoint                                 |
+| `server.mjs`              | Custom server: mounts Swagger UI at `/docs`, forwards the rest to Next.js |
+| `docs/swagger-ui.png`     | Screenshot of the Swagger UI (see below)                                  |
 
 ## Install & run
 
@@ -44,13 +44,13 @@ In Swagger UI, click **Try it out** on any endpoint and hit **Execute** — no
 
 Base URL: `http://localhost:3000`
 
-| Method | Path | Description | Success | Errors |
-| --- | --- | --- | --- | --- |
-| `GET` | `/tasks` | List all tasks. Add `?done=true` (finished only) or `?done=false` (unfinished only) to filter | `200` + JSON array | — |
-| `POST` | `/tasks` | Create a task (body: `{ "title": "string" }`) | `201` + the new task | `400` if title missing/empty |
-| `GET` | `/tasks/{id}` | Get one task by id | `200` + the task | `404` if not found |
-| `PUT` | `/tasks/{id}` | Update title and/or `done` (`{ "title"?, "done"? }`) | `200` + updated task | `400` / `404` |
-| `DELETE` | `/tasks/{id}` | Delete a task | `204` (no body) | `404` if not found |
+| Method   | Path          | Description                                                                                                                                                                                | Success              | Errors                       |
+|----------|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------|------------------------------|
+| `GET`    | `/tasks`      | List all tasks. Add `?done=true` (finished only) or `?done=false` (unfinished only) to filter by status, and `?search=milk` for a case-insensitive title substring match. Filters combine. | `200` + JSON array   | —                            |
+| `POST`   | `/tasks`      | Create a task (body: `{ "title": "string" }`)                                                                                                                                              | `201` + the new task | `400` if title missing/empty |
+| `GET`    | `/tasks/{id}` | Get one task by id                                                                                                                                                                         | `200` + the task     | `404` if not found           |
+| `PUT`    | `/tasks/{id}` | Update title and/or `done` (`{ "title"?, "done"? }`)                                                                                                                                       | `200` + updated task | `400` / `404`                |
+| `DELETE` | `/tasks/{id}` | Delete a task                                                                                                                                                                              | `204` (no body)      | `404` if not found           |
 
 ### Task shape
 
