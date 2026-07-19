@@ -243,6 +243,27 @@
           }
         }
       }
+    },
+    "/reset": {
+      "post": {
+        "summary": "Reset to seed tasks",
+        "description": "Clears the current task list and restores the 3 example tasks. Handy for demos and returning to a known state.",
+        "responses": {
+          "200": {
+            "description": "The restored seed tasks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
