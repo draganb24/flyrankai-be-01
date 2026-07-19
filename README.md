@@ -86,29 +86,3 @@ Transfer-Encoding: chunked
 All five endpoints are documented in `openapi.json` and rendered as interactive
 documentation at `/docs`. The screenshot above shows the full list; each row
 expands to show parameters, request body, and every response code.
-
----
-
-## Resources
-
-1. **HTTP methods** — https://developer.mozilla.org/docs/Web/HTTP/Methods
-2. **HTTP status codes** — https://developer.mozilla.org/docs/Web/HTTP/Status
-3. **JSON** — https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/JSON
-4. **Next.js App Router** — https://nextjs.org/docs/app
-5. **Route Handlers (API routes)** — https://nextjs.org/docs/app/building-your-application/routing/route-handlers
-6. **OpenAPI 3.0 spec** — https://spec.openapis.org/oas/v3.0.3
-7. **Swagger UI** — https://swagger.io/tools/swagger-ui/
-8. **swagger-ui-express** — https://www.npmjs.com/package/swagger-ui-express
-9. **Git & GitHub basics** — https://docs.github.com/get-started/quickstart
-
-   Init → add → commit → push, in one mental model:
-
-   ```bash
-   git init            # one time, turns a folder into a repo
-   git add .           # stage changes (or name files: git add README.md)
-   git commit -m "msg" # save a snapshot with a message
-   git push            # send commits to GitHub (after git remote add origin <url>)
-   ```
-
-   Next week's live session covers this properly — branches, pull requests, and
-   how teams review work.
