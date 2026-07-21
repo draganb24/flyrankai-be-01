@@ -1,8 +1,7 @@
-import { resetTasks } from '../lib/tasks';
+import { resetTasks } from '../lib/services/taskService.js';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST() {
-    const tasks = resetTasks();
-    return Response.json(tasks);
+    return Response.json(resetTasks());
 }

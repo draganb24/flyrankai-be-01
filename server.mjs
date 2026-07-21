@@ -4,6 +4,16 @@ import swaggerUi from 'swagger-ui-express';
 import path from 'node:path';
 import fs from 'node:fs';
 
+process.on('uncaughtException', (err) => {
+    if (err && err.code === 'EPIPE') return;
+    console.error('Uncaught exception:', err);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled rejection:', reason);
+});
+
 const dev = process.env.NODE_ENV !== 'production';
 const port = parseInt(process.env.PORT || '3000', 10);
 const hostname = 'localhost';

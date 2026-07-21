@@ -1,27 +1,18 @@
-import { tasks, addTask } from '../lib/tasks';
+import { listTasks, createTask } from '../lib/services/taskService.js';
+import { mapErrorToResponse } from '../lib/errors.js';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
     const { searchParams } = request.nextUrl;
     const rawDone = searchParams.get('done');
-    const search = searchParams.get('search');
+    const search = searchParams.get('search') ?? undefined;
 
-    let result = tasks;
+    let done;
+    if (rawDone === 'true') done = true;
+    else if (rawDone === 'false') done = false;
 
-    if (rawDone === 'true' || rawDone === 'false') {
-        const done = rawDone === 'true';
-        result = result.filter((task) => task.done === done);
-    }
-
-    if (search) {
-        const needle = search.toLowerCase();
-        result = result.filter((task) =>
-            task.title.toLowerCase().includes(needle)
-        );
-    }
-
-    return Response.json(result);
+    return Response.json(listTasks({ done, search }));
 }
 
 export async function POST(request) {
@@ -32,14 +23,10 @@ export async function POST(request) {
         return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const title = body?.title;
-    if (typeof title !== 'string' || title.trim() === '') {
-        return Response.json(
-            { error: 'Title is required and must be a non-empty string' },
-            { status: 400 }
-        );
+    try {
+        const task = createTask(body);
+        return Response.json(task, { status: 201 });
+    } catch (error) {
+        return mapErrorToResponse(error);
     }
-
-    const task = addTask(title.trim());
-    return Response.json(task, { status: 201 });
 }

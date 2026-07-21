@@ -1,17 +1,17 @@
-import { getTaskById, updateTask, deleteTask } from '../../lib/tasks';
+import { getTask, updateTask, deleteTask } from '../../lib/services/taskService.js';
+import { mapErrorToResponse } from '../../lib/errors.js';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request, { params }) {
     const { id } = await params;
     const taskId = Number(id);
-    const task = getTaskById(taskId);
 
-    if (!task) {
-        return Response.json({ error: `Task ${ taskId } not found` }, { status: 404 });
+    try {
+        return Response.json(getTask(taskId));
+    } catch (error) {
+        return mapErrorToResponse(error);
     }
-
-    return Response.json(task);
 }
 
 export async function PUT(request, { params }) {
@@ -25,46 +25,21 @@ export async function PUT(request, { params }) {
         return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const patch = {};
-    if (Object.prototype.hasOwnProperty.call(body, 'title')) {
-        if (typeof body.title !== 'string' || body.title.trim() === '') {
-            return Response.json(
-                { error: 'Title must be a non-empty string' },
-                { status: 400 }
-            );
-        }
-        patch.title = body.title.trim();
+    try {
+        return Response.json(updateTask(taskId, body));
+    } catch (error) {
+        return mapErrorToResponse(error);
     }
-    if (Object.prototype.hasOwnProperty.call(body, 'done')) {
-        if (typeof body.done !== 'boolean') {
-            return Response.json({ error: 'Done must be a boolean' }, { status: 400 });
-        }
-        patch.done = body.done;
-    }
-
-    if (Object.keys(patch).length === 0) {
-        return Response.json(
-            { error: 'Body must contain a \'title\' or \'done\' field' },
-            { status: 400 }
-        );
-    }
-
-    const updated = updateTask(taskId, patch);
-    if (!updated) {
-        return Response.json({ error: `Task ${ taskId } not found` }, { status: 404 });
-    }
-
-    return Response.json(updated);
 }
 
 export async function DELETE(request, { params }) {
     const { id } = await params;
     const taskId = Number(id);
 
-    const removed = deleteTask(taskId);
-    if (!removed) {
-        return Response.json({ error: `Task ${ taskId } not found` }, { status: 404 });
+    try {
+        deleteTask(taskId);
+        return new Response(null, { status: 204 });
+    } catch (error) {
+        return mapErrorToResponse(error);
     }
-
-    return new Response(null, { status: 204 });
 }

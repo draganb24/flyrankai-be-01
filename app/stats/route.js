@@ -1,12 +1,7 @@
-import { tasks } from '../lib/tasks';
+import { getStats } from '../lib/services/taskService.js';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-    const done = tasks.filter((task) => task.done).length;
-    return Response.json({
-        total: tasks.length,
-        done,
-        open: tasks.length - done
-    });
+    return Response.json(getStats());
 }

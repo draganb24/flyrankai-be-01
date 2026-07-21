@@ -11,14 +11,25 @@ API, not persistence.
 
 ## What's inside
 
-| File                      | Purpose                                                                   |
-|---------------------------|---------------------------------------------------------------------------|
-| `app/tasks/route.js`      | `GET` (list) and `POST` (create) for `/tasks`                             |
-| `app/tasks/[id]/route.js` | `GET` / `PUT` / `DELETE` for a single task                                |
-| `app/lib/tasks.js`        | In-memory task store and helpers                                          |
-| `openapi.json`            | OpenAPI 3.0 description of every endpoint                                 |
-| `server.mjs`              | Custom server: mounts Swagger UI at `/docs`, forwards the rest to Next.js |
-| `docs/swagger-ui.png`     | Screenshot of the Swagger UI (see below)                                  |
+The code is split into three layers so each file has one job:
+
+- **routes** (`app/**/route.js`) — parse HTTP, map service errors to status codes. Stay thin.
+- **service** (`app/lib/services/taskService.js`) — business rules: filtering, stats, and validation. Throws typed errors.
+- **repository** (`app/lib/repositories/taskRepository.js`) — the in-memory store and pure CRUD.
+- **errors** (`app/lib/errors.js`) — `ValidationError` (→ 400) / `NotFoundError` (→ 404) + HTTP mapper.
+
+| File                                     | Layer      | Purpose                                             |
+|------------------------------------------|------------|-----------------------------------------------------|
+| `app/tasks/route.js`                     | route      | `GET` (list) and `POST` (create) for `/tasks`       |
+| `app/tasks/[id]/route.js`                | route      | `GET` / `PUT` / `DELETE` for a single task          |
+| `app/stats/route.js`                     | route      | `GET` task statistics                               |
+| `app/reset/route.js`                     | route      | `POST` reset to seed tasks                          |
+| `app/lib/services/taskService.js`        | service    | Filtering, stats, validation, orchestration         |
+| `app/lib/repositories/taskRepository.js` | repository | In-memory task store and CRUD helpers               |
+| `app/lib/errors.js`                      | shared     | Typed errors and the HTTP error mapper              |
+| `openapi.json`                           | —          | OpenAPI 3.0 description of every endpoint           |
+| `server.mjs`                             | —          | Custom server: Swagger UI at `/docs`, forwards rest |
+| `docs/swagger-ui.png`                    | —          | Screenshot of the Swagger UI (see below)            |
 
 ## Install & run
 
@@ -92,6 +103,6 @@ expands to show parameters, request body, and every response code.
 ## Mortality experiment
 
 Create a few tasks, then restart the server and `GET /tasks`: the new tasks are
-gone, and only the 3 seed tasks remain. That is because tasks live in memory
-(`app/lib/tasks.js` holds them in a plain array), so they vanish the moment the
-process exits — nothing is ever written to a database or file.
+that is because tasks live in memory
+(`app/lib/repositories/taskRepository.js` holds them in a plain array), so they
+vanish the moment the process exits — nothing is ever written to a database or file.
