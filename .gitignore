@@ -26,6 +26,13 @@
 
 # debug
 npm-debug.log*
+
+# local sqlite database
+/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*

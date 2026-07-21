@@ -55,7 +55,7 @@ export function updateTask(id, body = {}) {
 
     const updated = repo.update(id, patch);
     if (!updated) throw new NotFoundError(`Task ${ id } not found`);
-    return updated;
+    return (updated);
 }
 
 export function deleteTask(id) {

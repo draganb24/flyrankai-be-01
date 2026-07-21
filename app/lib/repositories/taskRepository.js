@@ -1,45 +1,95 @@
-const g = globalThis;
+import { DatabaseSync } from 'node:sqlite';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const SEED = [
-    { id: 1, title: 'Learn what an API is', done: true },
-    { id: 2, title: 'Build a JSON endpoint', done: false },
-    { id: 3, title: 'Understand HTTP status codes', done: false }
-];
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const store = (g.__tasksStore ??= SEED.map((task) => ({ ...task })));
+const DATA_DIR = path.join(__dirname, '..', '..', '..', 'data');
+const DB_PATH = path.join(DATA_DIR, 'tasks.db');
+
+fs.mkdirSync(DATA_DIR, { recursive: true });
+const db = new DatabaseSync(DB_PATH);
+
+db.exec(`
+    CREATE TABLE IF NOT EXISTS tasks
+    (
+        id
+        INTEGER
+        PRIMARY
+        KEY,
+        title
+        TEXT
+        NOT
+        NULL,
+        done
+        INTEGER
+        NOT
+        NULL
+        DEFAULT
+        0
+    )
+`);
+
+function seedIfEmpty() {
+    const row = db.prepare('SELECT COUNT(*) AS c FROM tasks').get();
+    const count = Number(row.c);
+    if (count > 0) return;
+    const insert = db.prepare('INSERT INTO tasks (title, done) VALUES (?, ?)');
+    const examples = [
+        [ 'Learn the repository pattern', 0 ],
+        [ 'Build the service layer', 0 ],
+        [ 'Ship the API', 1 ]
+    ];
+    for (const [ title, done ] of examples) {
+        insert.run(title, done);
+    }
+}
+
+seedIfEmpty();
+
+function rowToTask(row) {
+    return {
+        id: (row.id),
+        title: (row.title),
+        done: row.done === 1
+    };
+}
 
 export function findAll() {
-    return store;
+    const rows = db.prepare('SELECT id, title, done FROM tasks ORDER BY id').all();
+    return rows.map(rowToTask);
 }
 
 export function findById(id) {
-    return store.find((task) => task.id === id) ?? null;
+    const row = db.prepare('SELECT id, title, done FROM tasks WHERE id = ?').get(id);
+    return row ? rowToTask(row) : undefined;
 }
 
 export function create(title) {
-    const nextId = store.reduce((max, task) => Math.max(max, task.id), 0) + 1;
-    const task = { id: nextId, title, done: false };
-    store.push(task);
-    return task;
+    const info = db.prepare('INSERT INTO tasks (title, done) VALUES (?, 0)').run(title);
+    const created = findById(Number(info.lastInsertRowid));
+    return (created);
 }
 
 export function update(id, patch) {
-    const task = findById(id);
-    if (!task) return null;
-    if (typeof patch.title === 'string') task.title = patch.title;
-    if (typeof patch.done === 'boolean') task.done = patch.done;
-    return task;
+    const existing = findById(id);
+    if (!existing) return undefined;
+    if (typeof patch.title === 'string') {
+        db.prepare('UPDATE tasks SET title = ? WHERE id = ?').run(patch.title, id);
+    }
+    if (typeof patch.done === 'boolean') {
+        db.prepare('UPDATE tasks SET done = ? WHERE id = ?').run(patch.done ? 1 : 0, id);
+    }
+    return findById(id);
 }
 
 export function remove(id) {
-    const index = store.findIndex((task) => task.id === id);
-    if (index === -1) return false;
-    store.splice(index, 1);
-    return true;
+    const info = db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+    return info.changes > 0;
 }
 
 export function reset() {
-    store.length = 0;
-    store.push(...SEED.map((task) => ({ ...task })));
-    return store;
+    db.prepare('DELETE FROM tasks').run();
+    seedIfEmpty();
 }
