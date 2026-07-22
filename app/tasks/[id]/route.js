@@ -1,4 +1,4 @@
-import { getTask, updateTask, deleteTask } from '../../lib/services/taskService.js';
+import { getRawTask, updateTask, deleteTask } from '../../lib/services/taskService.js';
 import { mapErrorToResponse } from '../../lib/errors.js';
 
 export const dynamic = 'force-dynamic';
@@ -7,11 +7,11 @@ export async function GET(request, { params }) {
     const { id } = await params;
     const taskId = Number(id);
 
-    try {
-        return Response.json(getTask(taskId));
-    } catch (error) {
-        return mapErrorToResponse(error);
+    const task = getRawTask(taskId);
+    if (!task) {
+        return Response.json({ error: 'Task not found' }, { status: 404 });
     }
+    return Response.json(task);
 }
 
 export async function PUT(request, { params }) {
