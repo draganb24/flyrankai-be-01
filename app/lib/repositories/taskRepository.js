@@ -79,7 +79,7 @@ export function findAll() {
 
 /** @returns {Record<string, unknown>[]} */
 export function rawFindAll() {
-    return db.prepare('SELECT * FROM tasks').all();
+    return db.prepare('SELECT * FROM tasks ORDER BY title').all();
 }
 
 /**
@@ -88,7 +88,7 @@ export function rawFindAll() {
  */
 export function searchRaw(term) {
     return db
-        .prepare('SELECT * FROM tasks WHERE title LIKE ? ORDER BY id')
+        .prepare('SELECT * FROM tasks WHERE title LIKE ? ORDER BY title')
         .all(`%${ term }%`);
 }
 
@@ -98,7 +98,7 @@ export function searchRaw(term) {
  */
 export function filterByDoneRaw(done) {
     return db
-        .prepare('SELECT * FROM tasks WHERE done = ? ORDER BY id')
+        .prepare('SELECT * FROM tasks WHERE done = ? ORDER BY title')
         .all(done ? 1 : 0);
 }
 
@@ -109,7 +109,7 @@ export function filterByDoneRaw(done) {
  */
 export function searchAndDoneRaw(term, done) {
     return db
-        .prepare('SELECT * FROM tasks WHERE title LIKE ? AND done = ? ORDER BY id')
+        .prepare('SELECT * FROM tasks WHERE title LIKE ? AND done = ? ORDER BY title')
         .all(`%${ term }%`, done ? 1 : 0);
 }
 
