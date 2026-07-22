@@ -6,6 +6,8 @@ import { ValidationError, NotFoundError } from '../errors.js';
  * @property {number} id
  * @property {string} title
  * @property {boolean} done
+ * @property {string | null} created_at
+ * @property {string | null} updated_at
  */
 
 /**

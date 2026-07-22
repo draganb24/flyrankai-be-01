@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
  * @property {number} id
  * @property {string} title
  * @property {boolean} done
+ * @property {string | null} created_at
+ * @property {string | null} updated_at
  */
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -36,6 +38,13 @@ db.exec(`
         0
     )
 `);
+
+const columnsNow = db.prepare('PRAGMA table_info(tasks)').all().map((r) => r.name);
+if (columnsNow.includes('created_at') && columnsNow.includes('updated_at')) {
+    db.exec(
+        'UPDATE tasks SET created_at = datetime(\'now\'), updated_at = datetime(\'now\') WHERE created_at IS NULL'
+    );
+}
 
 /**
  * Seed three examples, but only when the table is empty (count first, so the
@@ -67,7 +76,9 @@ function rowToTask(row) {
     return {
         id: /** @type {number} */ (row.id),
         title: /** @type {string} */ (row.title),
-        done: row.done === 1
+        done: row.done === 1,
+        created_at: /** @type {string | null} */ (row.created_at ?? null),
+        updated_at: /** @type {string | null} */ (row.updated_at ?? null)
     };
 }
 
@@ -137,7 +148,7 @@ export function rawFindById(id) {
  * @returns {Task | undefined}
  */
 export function findById(id) {
-    const row = db.prepare('SELECT id, title, done FROM tasks WHERE id = ?').get(id);
+    const row = db.prepare('SELECT id, title, done, created_at, updated_at FROM tasks WHERE id = ?').get(id);
     return row ? rowToTask(row) : undefined;
 }
 
@@ -146,14 +157,18 @@ export function findById(id) {
  * @returns {Task}
  */
 export function create(title) {
-    const info = db.prepare('INSERT INTO tasks (title, done) VALUES (?, ?)').run(title, 0);
+    const info = db
+        .prepare(
+            'INSERT INTO tasks (title, done, created_at, updated_at) VALUES (?, ?, datetime(\'now\'), datetime(\'now\'))'
+        )
+        .run(title, 0);
     const created = findById(Number(info.lastInsertRowid));
     return /** @type {Task} */ (created);
 }
 
 /**
  * Update one task with a partial patch. Runs a single parameterized statement:
- *   UPDATE tasks SET title = ?, done = ? WHERE id = ?
+ *   UPDATE tasks SET title = ?, done = ?, updated_at = datetime('now') WHERE id = ?
  * Untouched fields keep their current value. Missing id -> undefined (404).
  * @param {number} id
  * @param {{ title?: string, done?: boolean }} patch
@@ -164,7 +179,7 @@ export function update(id, patch) {
     if (!existing) return undefined;
     const title = typeof patch.title === 'string' ? patch.title : existing.title;
     const done = typeof patch.done === 'boolean' ? patch.done : existing.done;
-    db.prepare('UPDATE tasks SET title = ?, done = ? WHERE id = ?').run(
+    db.prepare('UPDATE tasks SET title = ?, done = ?, updated_at = datetime(\'now\') WHERE id = ?').run(
         title,
         done ? 1 : 0,
         id

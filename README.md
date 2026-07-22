@@ -89,6 +89,15 @@ In Swagger UI, click **Try it out** on any endpoint and hit **Execute** — no
   (free), choose **Open Database**, and point it at `data/tasks.db`. You're
   looking at the exact same rows the API serves.
 
+### Why migrations exist (a peek ahead)
+
+The table didn't always have `created_at` / `updated_at` columns — adding them
+meant editing the table's shape, not just its rows, and that turned out to be
+surprisingly fiddly (you can't `ALTER TABLE` with a `datetime('now')` default,
+so existing rows had to be backfilled by hand). That small taste of "the data is
+already there and now the schema changed" is exactly the problem database
+migrations exist to solve cleanly.
+
   <img width="1920" height="1080" alt="Screenshot (208)" src="https://github.com/user-attachments/assets/0862a9ad-c7c7-4433-806e-b24e7a80d256" />
 
 
