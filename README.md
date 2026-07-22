@@ -42,7 +42,7 @@ The code is split into three layers so each file has one job:
 | `app/stats/route.js`                     | route      | `GET` task statistics                               |
 | `app/reset/route.js`                     | route      | `POST` reset to seed tasks                          |
 | `app/lib/services/taskService.js`        | service    | Filtering, stats, validation, orchestration         |
-| `app/lib/repositories/taskRepository.js` | repository | SQLite task store and CRUD helpers                |
+| `app/lib/repositories/taskRepository.js` | repository | SQLite task store and CRUD helpers                  |
 | `app/lib/errors.js`                      | shared     | Typed errors and the HTTP error mapper              |
 | `openapi.json`                           | —          | OpenAPI 3.0 description of every endpoint           |
 | `server.mjs`                             | —          | Custom server: Swagger UI at `/docs`, forwards rest |
@@ -101,15 +101,15 @@ In Swagger UI, click **Try it out** on any endpoint and hit **Execute** — no
 
 Base URL: `http://localhost:3000`
 
-| Method   | Path          | Description                                                                                                                                                                                | Success              | Errors                       |
-|----------|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------|------------------------------|
-| `GET`    | `/tasks`      | List all tasks. Add `?done=true` (finished only) or `?done=false` (unfinished only) to filter by status, and `?search=milk` for a case-insensitive title substring match. Filters combine. | `200` + JSON array   | —                            |
-| `GET`    | `/stats`      | Computed counts: `{ "total", "done", "open" }`                                                                                                                                             | `200` + JSON object  | —                            |
-| `POST`   | `/reset`      | Clears all tasks and restores the 3 seed examples                                                                                                                                          | `200` + JSON array   | —                            |
-| `POST`   | `/tasks`      | Create a task (body: `{ "title": "string" }`)                                                                                                                                              | `201` + the new task | `400` if title missing/empty |
-| `GET`    | `/tasks/{id}` | Get one task by id                                                                                                                                                                         | `200` + the task     | `404` if not found           |
-| `PUT`    | `/tasks/{id}` | Update title and/or `done` (`{ "title"?, "done"? }`)                                                                                                                                       | `200` + updated task | `400` / `404`                |
-| `DELETE` | `/tasks/{id}` | Delete a task                                                                                                                                                                              | `204` (no body)      | `404` if not found           |
+| Method   | Path          | Description                                                                                                                               | Success              | Errors                       |
+|----------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------|----------------------|------------------------------|
+| `GET`    | `/tasks`      | List all tasks. Add `?search=milk` for a case-insensitive title substring match, run as a SQL `LIKE` filter in the database (not a loop). | `200` + JSON array   | —                            |
+| `GET`    | `/stats`      | Computed counts: `{ "total", "done", "open" }`                                                                                            | `200` + JSON object  | —                            |
+| `POST`   | `/reset`      | Clears all tasks and restores the 3 seed examples                                                                                         | `200` + JSON array   | —                            |
+| `POST`   | `/tasks`      | Create a task (body: `{ "title": "string" }`)                                                                                             | `201` + the new task | `400` if title missing/empty |
+| `GET`    | `/tasks/{id}` | Get one task by id                                                                                                                        | `200` + the task     | `404` if not found           |
+| `PUT`    | `/tasks/{id}` | Update title and/or `done` (`{ "title"?, "done"? }`)                                                                                      | `200` + updated task | `400` / `404`                |
+| `DELETE` | `/tasks/{id}` | Delete a task                                                                                                                             | `204` (no body)      | `404` if not found           |
 
 ### Task shape
 

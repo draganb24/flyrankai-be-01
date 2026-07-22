@@ -3,8 +3,9 @@ import { mapErrorToResponse } from '../lib/errors.js';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-    return Response.json(getRawTasks());
+export async function GET(request) {
+    const search = new URL(request.url).searchParams.get('search') ?? undefined;
+    return Response.json(getRawTasks(search));
 }
 
 export async function POST(request) {
