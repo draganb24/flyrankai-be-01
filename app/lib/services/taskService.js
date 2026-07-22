@@ -39,12 +39,12 @@ function assertValidDone(done) {
  * @returns {Record<string, unknown>[]}
  */
 export function getRawTasks(search, done) {
-  const hasSearch = typeof search === 'string' && search.trim() !== '';
-  const hasDone = typeof done === 'boolean';
-  if (hasSearch && hasDone) return repo.searchAndDoneRaw(search.trim(), done);
-  if (hasSearch) return repo.searchRaw(search.trim());
-  if (hasDone) return repo.filterByDoneRaw(done);
-  return repo.rawFindAll();
+    const hasSearch = typeof search === 'string' && search.trim() !== '';
+    const hasDone = typeof done === 'boolean';
+    if (hasSearch && hasDone) return repo.searchAndDoneRaw(search.trim(), done);
+    if (hasSearch) return repo.searchRaw(search.trim());
+    if (hasDone) return repo.filterByDoneRaw(done);
+    return repo.rawFindAll();
 }
 
 /**
@@ -62,16 +62,6 @@ export function getRawTask(id) {
 export function createTask(body) {
     const title = assertValidTitle(body?.title);
     return repo.create(title);
-}
-
-/**
- * @param {number} id
- * @returns {Task}
- */
-export function getTask(id) {
-    const task = repo.findById(id);
-    if (!task) throw new NotFoundError(`Task ${ id } not found`);
-    return task;
 }
 
 /**
@@ -111,9 +101,7 @@ export function deleteTask(id) {
  * @returns {{ total: number, done: number, open: number }}
  */
 export function getStats() {
-    const tasks = repo.findAll();
-    const done = tasks.filter((task) => task.done).length;
-    return { total: tasks.length, done, open: tasks.length - done };
+    return repo.getStatsRaw();
 }
 
 /** @returns {void} */

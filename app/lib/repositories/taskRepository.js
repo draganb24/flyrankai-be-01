@@ -71,15 +71,26 @@ function rowToTask(row) {
     };
 }
 
-/** @returns {Task[]} */
-export function findAll() {
-    const rows = db.prepare('SELECT id, title, done FROM tasks ORDER BY id').all();
-    return rows.map(rowToTask);
-}
-
 /** @returns {Record<string, unknown>[]} */
 export function rawFindAll() {
     return db.prepare('SELECT * FROM tasks ORDER BY title').all();
+}
+
+/**
+ * Aggregate counts in the database with `COUNT(*)` and `SUM(done)` — no rows
+ * are pulled into JS to count. `done` is stored as 0/1, so `SUM(done)` is the
+ * completed count; `total - done` is the open count.
+ * @returns {{ total: number, done: number, open: number }}
+ */
+export function getStatsRaw() {
+    const row = /** @type {{ total: number, done: number }} */ (
+        db
+            .prepare('SELECT COUNT(*) AS total, SUM(done) AS done FROM tasks')
+            .get()
+    );
+    const total = Number(row.total);
+    const done = Number(row.done);
+    return { total, done, open: total - done };
 }
 
 /**
