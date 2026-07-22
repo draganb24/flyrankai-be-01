@@ -89,6 +89,9 @@ In Swagger UI, click **Try it out** on any endpoint and hit **Execute** — no
   (free), choose **Open Database**, and point it at `data/tasks.db`. You're
   looking at the exact same rows the API serves.
 
+  <img width="1920" height="1080" alt="Screenshot (208)" src="https://github.com/user-attachments/assets/0862a9ad-c7c7-4433-806e-b24e7a80d256" />
+
+
 ![Task API database open in DB Browser](docs/db-browser.png)
 
 > The screenshot above is `docs/db-browser.png` — drop your own capture of
