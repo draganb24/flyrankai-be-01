@@ -93,6 +93,27 @@ export function searchRaw(term) {
 }
 
 /**
+ * @param {boolean} done
+ * @returns {Record<string, unknown>[]}
+ */
+export function filterByDoneRaw(done) {
+    return db
+        .prepare('SELECT * FROM tasks WHERE done = ? ORDER BY id')
+        .all(done ? 1 : 0);
+}
+
+/**
+ * @param {string} term
+ * @param {boolean} done
+ * @returns {Record<string, unknown>[]}
+ */
+export function searchAndDoneRaw(term, done) {
+    return db
+        .prepare('SELECT * FROM tasks WHERE title LIKE ? AND done = ? ORDER BY id')
+        .all(`%${ term }%`, done ? 1 : 0);
+}
+
+/**
  * @param {number} id
  * @returns {Record<string, unknown> | undefined}
  */

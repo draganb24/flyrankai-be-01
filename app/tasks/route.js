@@ -4,8 +4,12 @@ import { mapErrorToResponse } from '../lib/errors.js';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
-    const search = new URL(request.url).searchParams.get('search') ?? undefined;
-    return Response.json(getRawTasks(search));
+    const params = new URL(request.url).searchParams;
+    const search = params.get('search') ?? undefined;
+    const doneParam = params.get('done');
+    const done =
+        doneParam === 'true' ? true : doneParam === 'false' ? false : undefined;
+    return Response.json(getRawTasks(search, done));
 }
 
 export async function POST(request) {

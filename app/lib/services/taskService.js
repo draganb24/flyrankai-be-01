@@ -32,15 +32,19 @@ function assertValidDone(done) {
 
 /**
  * List tasks as raw rows. When `search` is a non-empty string, filter in the
- * database with a `LIKE` match on the title; otherwise return everything.
+ * database with a `LIKE` match on the title; when `done` is a boolean, filter
+ * by completion with `WHERE done = ?`. Both can combine — all in SQL.
  * @param {string} [search]
+ * @param {boolean} [done]
  * @returns {Record<string, unknown>[]}
  */
-export function getRawTasks(search) {
-    if (typeof search === 'string' && search.trim() !== '') {
-        return repo.searchRaw(search.trim());
-    }
-    return repo.rawFindAll();
+export function getRawTasks(search, done) {
+  const hasSearch = typeof search === 'string' && search.trim() !== '';
+  const hasDone = typeof done === 'boolean';
+  if (hasSearch && hasDone) return repo.searchAndDoneRaw(search.trim(), done);
+  if (hasSearch) return repo.searchRaw(search.trim());
+  if (hasDone) return repo.filterByDoneRaw(done);
+  return repo.rawFindAll();
 }
 
 /**
