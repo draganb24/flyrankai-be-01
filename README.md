@@ -9,6 +9,23 @@ The data is persisted to a real SQLite database (`data/tasks.db`) using Node's
 built-in `node:sqlite` — so tasks survive a server restart. All SQL lives in the
 repository layer; routes and services never talk to the database directly.
 
+### Why SQLite?
+
+We deliberately picked SQLite over Postgres/MySQL for this teaching project:
+
+- **Single file.** The entire database is one file (`data/tasks.db`). There is no
+  server process to install, configure, or keep running — the app just opens the
+  file.
+- **Zero setup.** It ships inside Node (the built-in `node:sqlite` module), so
+  there is nothing extra to download or authenticate against.
+- **Survives restarts.** Because state lives in that file, tasks are still there
+  after you stop and start the server — no seeding-by-hand, no migration step.
+
+That last point is the whole lesson of this project: a real backend keeps its
+state somewhere that outlives the process. SQLite is the smallest possible
+"somewhere," and almost every production database is the same idea at larger
+scale.
+
 ## What's inside
 
 The code is split into three layers so each file has one job:
@@ -33,11 +50,19 @@ The code is split into three layers so each file has one job:
 
 ## Install & run
 
-Requires [Node.js](https://nodejs.org) 18+.
+**One command gets you a working app:**
 
 ```bash
 npm install && npm run dev
 ```
+
+That's it. No database to install, no connection string to set. The first time the
+server starts it creates `data/tasks.db` automatically (if it doesn't exist) and
+seeds three example tasks — so a stranger cloning this repo and running that one
+command has a running API with data in well under five minutes.
+
+Requires [Node.js](https://nodejs.org) 18+ (the code uses the built-in
+`node:sqlite`, so use Node 22.5+ for the stable API).
 
 Then open:
 
@@ -50,6 +75,24 @@ In Swagger UI, click **Try it out** on any endpoint and hit **Execute** — no
 "Try it out" just works.
 
 > Production build: `npm run build && npm start`.
+
+## Where the database lives
+
+- **File:** `data/tasks.db` (relative to the repo root).
+- **Created automatically** by `app/lib/repositories/taskRepository.js` on first
+  import — it makes the `data/` directory, runs `CREATE TABLE IF NOT EXISTS`, and
+  inserts the three seed tasks only when the table is empty.
+- **Git-ignored.** `data/` and `*.db` are in `.gitignore`, so the file is never
+  committed. Every fresh clone starts with *no* database and gets one on first
+  run — your local tasks stay local.
+- **Open it yourself.** Grab [DB Browser for SQLite](https://sqlitebrowser.org)
+  (free), choose **Open Database**, and point it at `data/tasks.db`. You're
+  looking at the exact same rows the API serves.
+
+![Task API database open in DB Browser](docs/db-browser.png)
+
+> The screenshot above is `docs/db-browser.png` — drop your own capture of
+> `tasks.db` in the **Execute SQL** (or **Browse Data**) tab there.
 
 ## Endpoints
 
@@ -125,9 +168,11 @@ SELECT COUNT(*) FROM tasks;
 -- → 4
 ```
 
-> **Saved query (for the record):** `SELECT * FROM tasks WHERE done = 1;`
-> returned exactly the two completed tasks (ids 3 and 4) — the same rows the API
-> serves at `GET /tasks` filtered by `done`, because both read this one file.
+> **Saved query (for the record):** `SELECT * FROM tasks WHERE done = 1;` returned
+> the completed tasks in the database I was exploring (ids 3 and 4 at the time).
+> On a brand-new clone you'll instead see just the three seed tasks — two of them
+> unfinished and "Ship the API" already done — because the API and DB Browser read
+> this one file.
 
 **Try the round-trip yourself:** in DB Browser, run `UPDATE tasks SET done = 1;`
 (or insert/delete a row), then call `GET /tasks` from the API. The change shows
