@@ -219,8 +219,3 @@ Create a few tasks, restart the server, and `GET /tasks` — the tasks are still
 there. That's the whole point of Stage 1–3: the repository writes every change to
 `data/tasks.db` (`node:sqlite`), so state outlives the process. Every serious
 backend on Earth is this idea, wearing more clothes.
-
-> Note: `data/` is git-ignored, so the database file is local to your machine and
-> not committed. The 3 seed examples are re-created automatically if the table
-> is ever empty.
-[H[2J[3J
