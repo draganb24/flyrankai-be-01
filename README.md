@@ -26,6 +26,26 @@ state somewhere that outlives the process. SQLite is the smallest possible
 "somewhere," and almost every production database is the same idea at larger
 scale.
 
+## A real database server (optional — Postgres in Docker)
+
+This project persists to SQLite (a file) for zero-setup teaching. To meet the
+kind of database that runs as its own program, start Postgres in one command —
+with a named volume so its data survives container restarts:
+
+```bash
+docker run --name taskdb -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=tasks \
+  -p 5432:5432 -v taskdata:/var/lib/postgresql/data -d postgres
+```
+
+Confirm it's up with `docker ps`, then open a SQL prompt inside the container:
+
+```bash
+docker exec -it taskdb psql -U postgres -d tasks
+```
+
+Inside `psql`, `\dt` lists tables (none yet) and `\q` quits. The server is then
+reachable on `localhost:5432`.
+
 ## What's inside
 
 The code is split into three layers so each file has one job:
@@ -203,3 +223,4 @@ backend on Earth is this idea, wearing more clothes.
 > Note: `data/` is git-ignored, so the database file is local to your machine and
 > not committed. The 3 seed examples are re-created automatically if the table
 > is ever empty.
+[H[2J[3J
