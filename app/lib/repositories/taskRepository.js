@@ -81,8 +81,8 @@ function rowToTask(row) {
 
 /** @returns {Promise<Record<string, unknown>[]>} */
 export async function rawFindAll() {
-    const { rows } = await pool.query('SELECT * FROM tasks ORDER BY title');
-    return rows;
+  const { rows } = await pool.query('SELECT * FROM tasks');
+  return rows;
 }
 
 /**
