@@ -1,5 +1,7 @@
 import pg from 'pg';
 
+import '../redis.js';
+
 /**
  * @typedef {Object} Task
  * @property {number} id
