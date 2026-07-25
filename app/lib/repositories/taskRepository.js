@@ -1,72 +1,71 @@
-import { DatabaseSync } from 'node:sqlite';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import pg from 'pg';
 
 /**
  * @typedef {Object} Task
  * @property {number} id
  * @property {string} title
  * @property {boolean} done
- * @property {string | null} created_at
- * @property {string | null} updated_at
  */
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, '..', '..', '..', 'data');
-const DB_PATH = path.join(DATA_DIR, 'tasks.db');
+const CONNECTION_STRING = process.env.DATABASE_URL;
 
-fs.mkdirSync(DATA_DIR, { recursive: true });
-const db = new DatabaseSync(DB_PATH);
+const pool = new pg.Pool({ connectionString: CONNECTION_STRING });
 
-db.exec(`
-    CREATE TABLE IF NOT EXISTS tasks
-    (
-        id
-        INTEGER
-        PRIMARY
-        KEY,
-        title
-        TEXT
-        NOT
-        NULL,
-        done
-        INTEGER
-        NOT
-        NULL
-        DEFAULT
-        0
+pool
+    .query(
+        `CREATE TABLE IF NOT EXISTS tasks
+         (
+             id
+             SERIAL
+             PRIMARY
+             KEY,
+             title
+             TEXT
+             NOT
+             NULL,
+             done
+             BOOLEAN
+             NOT
+             NULL
+             DEFAULT
+             false
+         )`
     )
-`);
-
-const columnsNow = db.prepare('PRAGMA table_info(tasks)').all().map((r) => r.name);
-if (columnsNow.includes('created_at') && columnsNow.includes('updated_at')) {
-    db.exec(
-        'UPDATE tasks SET created_at = datetime(\'now\'), updated_at = datetime(\'now\') WHERE created_at IS NULL'
-    );
-}
+    .then(() => pool.query('SELECT COUNT(*)::int AS c FROM tasks'))
+    .then(({ rows }) => {
+        if (Number(rows[0].c) > 0) return;
+        const examples = /** @type {Array<[string, boolean]>} */ ([
+            [ 'Learn the repository pattern', false ],
+            [ 'Build the service layer', false ],
+            [ 'Ship the API', true ]
+        ]);
+        return pgFormatInsert(pool, examples);
+    })
+    .catch((err) => {
+        console.error('[taskRepository] startup init failed:', err.message);
+    });
 
 /**
- * Seed three examples, but only when the table is empty (count first, so the
- * examples never multiply on restart).
- * @returns {void}
+ * Seed the examples inside a single transaction.
+ * @param {pg.Pool} pool
+ * @param {Array<[string, boolean]>} examples
+ * @returns {Promise<void>}
  */
-function seedIfEmpty() {
-    const row = db.prepare('SELECT COUNT(*) AS c FROM tasks').get();
-    const count = Number(row.c);
-    if (count > 0) return;
-    const insert = db.prepare('INSERT INTO tasks (title, done) VALUES (?, ?)');
-    const examples = [
-        [ 'Learn the repository pattern', 0 ],
-        [ 'Build the service layer', 0 ],
-        [ 'Ship the API', 1 ]
-    ];
-    for (const [ title, done ] of examples) {
-        insert.run(title, done);
+async function pgFormatInsert(pool, examples) {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        for (const [ title, done ] of examples) {
+            await client.query('INSERT INTO tasks (title, done) VALUES ($1, $2)', [ title, done ]);
+        }
+        await client.query('COMMIT');
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
     }
 }
-
-seedIfEmpty();
 
 /**
  * @param {Record<string, unknown>} row
@@ -76,128 +75,131 @@ function rowToTask(row) {
     return {
         id: /** @type {number} */ (row.id),
         title: /** @type {string} */ (row.title),
-        done: row.done === 1,
-        created_at: /** @type {string | null} */ (row.created_at ?? null),
-        updated_at: /** @type {string | null} */ (row.updated_at ?? null)
+        done: row.done === true
     };
 }
 
-/** @returns {Record<string, unknown>[]} */
-export function rawFindAll() {
-    return db.prepare('SELECT * FROM tasks ORDER BY title').all();
+/** @returns {Promise<Record<string, unknown>[]>} */
+export async function rawFindAll() {
+    const { rows } = await pool.query('SELECT * FROM tasks ORDER BY title');
+    return rows;
 }
 
 /**
  * Aggregate counts in the database with `COUNT(*)` and `SUM(done)` — no rows
- * are pulled into JS to count. `done` is stored as 0/1, so `SUM(done)` is the
- * completed count; `total - done` is the open count.
- * @returns {{ total: number, done: number, open: number }}
+ * are pulled into JS to count. `done` is stored as boolean, so `SUM(done)` is
+ * the completed count; `total - done` is the open count.
+ * @returns {Promise<{ total: number, done: number, open: number }>}
  */
-export function getStatsRaw() {
-    const row = /** @type {{ total: number, done: number }} */ (
-        db
-            .prepare('SELECT COUNT(*) AS total, SUM(done) AS done FROM tasks')
-            .get()
+export async function getStatsRaw() {
+    const { rows } = await pool.query(
+        'SELECT COUNT(*)::int AS total, COALESCE(SUM(done::int), 0)::int AS done FROM tasks'
     );
-    const total = Number(row.total);
-    const done = Number(row.done);
+    const total = Number(rows[0].total);
+    const done = Number(rows[0].done);
     return { total, done, open: total - done };
 }
 
 /**
  * @param {string} term
- * @returns {Record<string, unknown>[]}
+ * @returns {Promise<Record<string, unknown>[]>}
  */
-export function searchRaw(term) {
-    return db
-        .prepare('SELECT * FROM tasks WHERE title LIKE ? ORDER BY title')
-        .all(`%${ term }%`);
+export async function searchRaw(term) {
+    const { rows } = await pool.query('SELECT * FROM tasks WHERE title ILIKE $1 ORDER BY title', [
+        `%${ term }%`
+    ]);
+    return rows;
 }
 
 /**
  * @param {boolean} done
- * @returns {Record<string, unknown>[]}
+ * @returns {Promise<Record<string, unknown>[]>}
  */
-export function filterByDoneRaw(done) {
-    return db
-        .prepare('SELECT * FROM tasks WHERE done = ? ORDER BY title')
-        .all(done ? 1 : 0);
+export async function filterByDoneRaw(done) {
+    const { rows } = await pool.query('SELECT * FROM tasks WHERE done = $1 ORDER BY title', [ done ]);
+    return rows;
 }
 
 /**
  * @param {string} term
  * @param {boolean} done
- * @returns {Record<string, unknown>[]}
+ * @returns {Promise<Record<string, unknown>[]>}
  */
-export function searchAndDoneRaw(term, done) {
-    return db
-        .prepare('SELECT * FROM tasks WHERE title LIKE ? AND done = ? ORDER BY title')
-        .all(`%${ term }%`, done ? 1 : 0);
+export async function searchAndDoneRaw(term, done) {
+    const { rows } = await pool.query(
+        'SELECT * FROM tasks WHERE title ILIKE $1 AND done = $2 ORDER BY title',
+        [ `%${ term }%`, done ]
+    );
+    return rows;
 }
 
 /**
  * @param {number} id
- * @returns {Record<string, unknown> | undefined}
+ * @returns {Promise<Record<string, unknown> | undefined>}
  */
-export function rawFindById(id) {
-    return db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+export async function rawFindById(id) {
+    const { rows } = await pool.query('SELECT * FROM tasks WHERE id = $1', [ id ]);
+    return rows[0];
 }
 
 /**
  * @param {number} id
- * @returns {Task | undefined}
+ * @returns {Promise<Task | undefined>}
  */
-export function findById(id) {
-    const row = db.prepare('SELECT id, title, done, created_at, updated_at FROM tasks WHERE id = ?').get(id);
-    return row ? rowToTask(row) : undefined;
+export async function findById(id) {
+    const { rows } = await pool.query('SELECT id, title, done FROM tasks WHERE id = $1', [ id ]);
+    return rows[0] ? rowToTask(rows[0]) : undefined;
 }
 
 /**
  * @param {string} title
- * @returns {Task}
+ * @returns {Promise<Task>}
  */
-export function create(title) {
-    const info = db
-        .prepare(
-            'INSERT INTO tasks (title, done, created_at, updated_at) VALUES (?, ?, datetime(\'now\'), datetime(\'now\'))'
-        )
-        .run(title, 0);
-    const created = findById(Number(info.lastInsertRowid));
-    return /** @type {Task} */ (created);
+export async function create(title) {
+    const { rows } = await pool.query(
+        'INSERT INTO tasks (title, done) VALUES ($1, $2) RETURNING id, title, done',
+        [ title, false ]
+    );
+    return /** @type {Task} */ (rowToTask(rows[0]));
 }
 
 /**
- * Update one task with a partial patch. Runs a single parameterized statement:
- *   UPDATE tasks SET title = ?, done = ?, updated_at = datetime('now') WHERE id = ?
+ * Update one task with a partial patch. Runs a single parameterized statement.
  * Untouched fields keep their current value. Missing id -> undefined (404).
  * @param {number} id
  * @param {{ title?: string, done?: boolean }} patch
- * @returns {Task | undefined}
+ * @returns {Promise<Task | undefined>}
  */
-export function update(id, patch) {
-    const existing = findById(id);
+export async function update(id, patch) {
+    const existing = await findById(id);
     if (!existing) return undefined;
     const title = typeof patch.title === 'string' ? patch.title : existing.title;
     const done = typeof patch.done === 'boolean' ? patch.done : existing.done;
-    db.prepare('UPDATE tasks SET title = ?, done = ?, updated_at = datetime(\'now\') WHERE id = ?').run(
-        title,
-        done ? 1 : 0,
-        id
+    const { rows } = await pool.query(
+        'UPDATE tasks SET title = $1, done = $2 WHERE id = $3 RETURNING id, title, done',
+        [ title, done, id ]
     );
-    return findById(id);
+    return rows[0] ? rowToTask(rows[0]) : undefined;
 }
 
 /**
  * @param {number} id
- * @returns {boolean} true if a row was deleted
+ * @returns {Promise<boolean>} true if a row was deleted
  */
-export function remove(id) {
-    const info = db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
-    return info.changes > 0;
+export async function remove(id) {
+    const { rowCount } = await pool.query('DELETE FROM tasks WHERE id = $1', [ id ]);
+    return (rowCount ?? 0) > 0;
 }
 
-/** @returns {void} */
-export function reset() {
-    db.prepare('DELETE FROM tasks').run();
-    seedIfEmpty();
+/** @returns {Promise<void>} */
+export async function reset() {
+    await pool.query('DELETE FROM tasks');
+    await pgFormatInsert(
+        pool,
+        /** @type {Array<[string, boolean]>} */ ([
+            [ 'Learn the repository pattern', false ],
+            [ 'Build the service layer', false ],
+            [ 'Ship the API', true ]
+        ])
+    );
 }

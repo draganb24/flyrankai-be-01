@@ -9,7 +9,7 @@ export async function GET(request) {
     const doneParam = params.get('done');
     const done =
         doneParam === 'true' ? true : doneParam === 'false' ? false : undefined;
-    return Response.json(getRawTasks(search, done));
+    return Response.json(await getRawTasks(search, done));
 }
 
 export async function POST(request) {
@@ -21,7 +21,7 @@ export async function POST(request) {
     }
 
     try {
-        const task = createTask(body);
+        const task = await createTask(body);
         return Response.json(task, { status: 201 });
     } catch (error) {
         return mapErrorToResponse(error);

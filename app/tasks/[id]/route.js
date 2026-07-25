@@ -7,7 +7,7 @@ export async function GET(request, { params }) {
     const { id } = await params;
     const taskId = Number(id);
 
-    const task = getRawTask(taskId);
+    const task = await getRawTask(taskId);
     if (!task) {
         return Response.json({ error: 'Task not found' }, { status: 404 });
     }
@@ -26,7 +26,7 @@ export async function PUT(request, { params }) {
     }
 
     try {
-        return Response.json(updateTask(taskId, body));
+        return Response.json(await updateTask(taskId, body));
     } catch (error) {
         return mapErrorToResponse(error);
     }
@@ -37,7 +37,7 @@ export async function DELETE(request, { params }) {
     const taskId = Number(id);
 
     try {
-        deleteTask(taskId);
+        await deleteTask(taskId);
         return new Response(null, { status: 204 });
     } catch (error) {
         return mapErrorToResponse(error);

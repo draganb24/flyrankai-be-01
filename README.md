@@ -26,16 +26,21 @@ state somewhere that outlives the process. SQLite is the smallest possible
 "somewhere," and almost every production database is the same idea at larger
 scale.
 
-## A real database server (optional — Postgres in Docker)
+## A real database server (Postgres in Docker)
 
-This project persists to SQLite (a file) for zero-setup teaching. To meet the
-kind of database that runs as its own program, start Postgres in one command —
-with a named volume so its data survives container restarts:
+This project connects to a real Postgres database when `DATABASE_URL` is set
+(see `.env.example`); without it, the app falls back to its SQLite file store.
+To meet the kind of database that runs as its own program, start Postgres in
+one command — with a named volume so its data survives container restarts:
 
 ```bash
 docker run --name taskdb -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=tasks \
   -p 5432:5432 -v taskdata:/var/lib/postgresql/data -d postgres
 ```
+
+Map the published port to whatever is free on your machine (here it's `5434`),
+then set `DATABASE_URL` in your git-ignored `.env` to match, e.g.
+`postgres://postgres:dev@localhost:5434/tasks`.
 
 Confirm it's up with `docker ps`, then open a SQL prompt inside the container:
 
@@ -43,8 +48,9 @@ Confirm it's up with `docker ps`, then open a SQL prompt inside the container:
 docker exec -it taskdb psql -U postgres -d tasks
 ```
 
-Inside `psql`, `\dt` lists tables (none yet) and `\q` quits. The server is then
-reachable on `localhost:5432`.
+Inside `psql`, `\dt` lists tables (the app creates `tasks` on first run) and
+`\q` quits. The server is then reachable on `localhost:5432` (or your mapped
+port).
 
 ## What's inside
 
