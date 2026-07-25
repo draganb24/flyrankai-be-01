@@ -81,8 +81,8 @@ function rowToTask(row) {
 
 /** @returns {Promise<Record<string, unknown>[]>} */
 export async function rawFindAll() {
-  const { rows } = await pool.query('SELECT * FROM tasks');
-  return rows;
+    const { rows } = await pool.query('SELECT * FROM tasks');
+    return rows;
 }
 
 /**
@@ -157,7 +157,7 @@ export async function findById(id) {
  */
 export async function create(title) {
     const { rows } = await pool.query(
-        'INSERT INTO tasks (title, done) VALUES ($1, $2) RETURNING id, title, done',
+        'INSERT INTO tasks (title, done) VALUES ($1, $2) RETURNING *',
         [ title, false ]
     );
     return /** @type {Task} */ (rowToTask(rows[0]));
