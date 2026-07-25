@@ -83,6 +83,9 @@ cp .env.example .env
 committed and contains no secret, only the shape. A leaked database credential
 is a real incident; keep yours local.
 
+<img width="1920" height="1080" alt="Screenshot (209)" src="https://github.com/user-attachments/assets/33c0fba4-183e-423f-a850-04843fdd326f" />
+
+
 ## Endpoints
 
 Base URL: `http://localhost:3000`
