@@ -31,6 +31,9 @@ pool
              false
          )`
     )
+    .then(() => pool.query(
+        'CREATE INDEX IF NOT EXISTS idx_tasks_done ON tasks (done)'
+    ))
     .then(() => pool.query('SELECT COUNT(*)::int AS c FROM tasks'))
     .then(({ rows }) => {
         if (Number(rows[0].c) > 0) return;
