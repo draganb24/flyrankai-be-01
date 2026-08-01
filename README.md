@@ -127,7 +127,7 @@ Transfer-Encoding: chunked
 
 ## Swagger UI
 
-![Swagger UI for the Task API](docs/swagger-ui.png)
+<img width="1920" height="801" alt="Screenshot (251)" src="https://github.com/user-attachments/assets/d3e6c340-d6af-488b-aa9f-65c5226b154c" />
 
 All endpoints are documented in `openapi.json` and rendered as interactive
 documentation at `/docs`. Click **Try it out** on any endpoint and hit
