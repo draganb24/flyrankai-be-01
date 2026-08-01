@@ -152,6 +152,9 @@ Swagger UI is served at **[/docs](http://localhost:3000/docs)** and reads the sp
 
 The raw spec is also available at `/openapi.json`.
 
+<img width="1920" height="801" alt="Screenshot (251)" src="https://github.com/user-attachments/assets/a68a56c2-099a-4ca9-96e2-283be8853842" />
+
+
 ## Scripts
 
 | Script          | Purpose                                              |
