@@ -12,6 +12,29 @@
     }
   ],
   "paths": {
+    "/public/info": {
+      "get": {
+        "summary": "Public welcome info",
+        "description": "A public endpoint that requires no authentication.",
+        "responses": {
+          "200": {
+            "description": "A public welcome message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tasks": {
       "get": {
         "summary": "List all tasks",
