@@ -1,167 +1,190 @@
 # Task API
 
-A tiny, deliberately small JSON API for managing a to-do list — built with
-[Next.js](https://nextjs.org) (App Router) and documented live with Swagger UI.
-It exists to teach the shape of an API: routes, HTTP methods, status codes, and
-request/response bodies — and the shape of a **real backend**: a database that
-runs as its own program, with code split into layers.
+A tiny task-tracking API built with **Next.js 16 (App Router)** and **Express**, backed by **Supabase** for authentication. Manage a todo list with full CRUD, protect routes with Supabase-issued JWTs, and document everything with Swagger UI.
 
-The data lives in a **Postgres** database, reached through the
-[`pg`](https://node-postgres.com) driver by a connection string in `DATABASE_URL`.
-On first start the app creates the `tasks` table if it's missing and seeds three
-example rows **only when the table is empty** — so state survives a restart and a
-fresh clone comes up with data. Every SQL statement lives in the repository
-layer; routes and services never touch the database directly.
+This is a learning-oriented backend project: it deliberately keeps the data layer simple (in-memory tasks), while showing real-world auth patterns — server-side JWT verification, a reusable route guard (middleware), and token revocation on logout.
 
-## What's inside (layered architecture)
+## Features
 
-The code is split into three layers so each file has one job:
+- **Task CRUD** — create, read, update, delete, list (with `?done` and `?search` filters), plus `/stats` and `/reset`.
+- **Supabase authentication** — sign-up, login, and a protected profile/dashboard.
+- **Reusable auth guard** — `withAuth` middleware verifies the Bearer JWT against Supabase's Auth server on every request (no trusting locally decoded tokens).
+- **Real logout** — `POST /auth/logout` revokes the session via Supabase (`signOut`), invalidating the refresh token.
+- **Interactive docs** — Swagger UI served at `/docs`, generated from `openapi.json`.
 
-- **routes** (`app/**/route.js`) — parse HTTP, validate params, map service
-  errors to status codes. Stay thin.
-- **service** (`app/lib/services/taskService.js`) — business rules and
-  validation. Throws typed errors (`ValidationError` → 400, `NotFoundError` →
-  404).
-- **repository** (`app/lib/repositories/taskRepository.js`) — the Postgres store
-  and pure CRUD. Every `SELECT` / `INSERT` / `UPDATE` / `DELETE` lives here, all
-  parameterized (`$1`, `$2`, …).
+## Architecture
 
-| File                                     | Layer      | Purpose                                       |
-|------------------------------------------|------------|-----------------------------------------------|
-| `app/tasks/route.js`                     | route      | `GET` (list) and `POST` (create) for `/tasks` |
-| `app/tasks/[id]/route.js`                | route      | `GET` / `PUT` / `DELETE` for a single task    |
-| `app/stats/route.js`                     | route      | `GET` task statistics                         |
-| `app/reset/route.js`                     | route      | `POST` reset to the three seed tasks          |
-| `app/lib/services/taskService.js`        | service    | Validation, orchestration, typing             |
-| `app/lib/repositories/taskRepository.js` | repository | Postgres store and CRUD (all SQL here)        |
-| `app/lib/errors.js`                      | shared     | Typed errors and the HTTP error mapper        |
-| `server.mjs`                             | —          | Custom server: Swagger UI at `/docs`          |
-| `Dockerfile`, `compose.yaml`             | —          | Run the whole thing in containers             |
-
-## Run everything (one command)
-
-With [Docker](https://www.docker.com) installed, this boots the API **and** a
-Postgres database together — no manual database setup:
-
-```bash
-docker compose up
+```
+                 ┌─────────────────────────────────────────┐
+   HTTP request  │  Express server (server.mjs)            │
+ ───────────────►│   /docs            → Swagger UI          │
+                 │   /openapi.json    → spec (JSON)         │
+                 │   /* (all else)    → Next.js App Router  │
+                 └─────────────────────────────────────────┘
+                              │
+            App Router routes (app/**/route.js)
+              • /tasks, /tasks/[id], /stats, /reset   (public/in-memory)
+              • /auth/login, /auth/signup              (Supabase auth)
+              • /protected/profile, /protected/dashboard (withAuth guard)
+              • /auth/logout                            (withAuth + signOut)
+                              │
+                    app/lib/supabaseClient.js  (anon + service-role clients)
+                              │
+                         Supabase Auth
 ```
 
-- API: http://localhost:3000
-- Swagger UI (interactive docs): http://localhost:3000/docs
-- Raw OpenAPI spec: http://localhost:3000/openapi.json
+The Express layer (`server.mjs`) boots Next.js and mounts Swagger UI, then forwards every other path to the Next.js request handler. Routes live under `app/` as standard App Router `route.js` files.
 
-The `api` service builds from the `Dockerfile`; the `db` service is the official
-`postgres` image with a named volume (`taskdata`) so data survives restarts.
-Inside the compose network the app reaches the database by the service name
-`db` (`postgres://postgres:dev@db:5432/tasks`) — not `localhost`.
+## Prerequisites
 
-### Without Docker (local Postgres)
+- **Node.js** 18.18+ (tested on Node 24)
+- A **Supabase** project (free tier is fine) — you only need the Auth service.
 
-If you already run Postgres yourself, set `DATABASE_URL` in a git-ignored
-`.env` and start the app:
+## Getting started
 
-```bash
-npm install
-npm run dev          # http://localhost:3000
-```
+1. **Install dependencies**
 
-## Variables to set
+   ```bash
+   npm install
+   ```
 
-Copy the template and fill in your database URL:
+2. **Configure environment variables** (see below).
+
+3. **Run the dev server**
+
+   ```bash
+   npm run dev
+   ```
+
+   The API and docs are available at:
+
+   - API:        http://localhost:3000
+   - Swagger UI: http://localhost:3000/docs
+   - OpenAPI spec: http://localhost:3000/openapi.json
+
+4. **Production build**
+
+   ```bash
+   npm run build     # next build
+   npm run start     # NODE_ENV=production node server.mjs
+   ```
+
+## Environment variables
+
+Copy the example file and fill in your Supabase project values:
 
 ```bash
 cp .env.example .env
-# then edit .env so DATABASE_URL points at your Postgres instance
 ```
 
-| Variable       | Where it's read         | Example                                        |
-|----------------|-------------------------|------------------------------------------------|
-| `DATABASE_URL` | repository (at startup) | `postgres://postgres:dev@localhost:5432/tasks` |
+| Variable                    | Required | Description                                                                                                                                                                                                        |
+|-----------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `SUPABASE_URL`              | yes      | Your Supabase project URL, e.g. `https://<project-ref>.supabase.co`. Falls back to `NEXT_PUBLIC_SUPABASE_URL`.                                                                                                     |
+| `SUPABASE_KEY`              | yes      | Supabase **anon** public key. Safe to expose to clients. Falls back to `NEXT_PUBLIC_SUPABASE_ANON_KEY`.                                                                                                            |
+| `SUPABASE_SERVICE_ROLE_KEY` | optional | Supabase **service-role** key. Grants admin privileges — keep it server-side only. When set, the logout route can revoke sessions through the Admin API. When absent, logout still works via the anon client flow. |
 
-`.env` is **git-ignored** — never commit a real password. `.env.example` is
-committed and contains no secret, only the shape. A leaked database credential
-is a real incident; keep yours local.
+`.env` is gitignored (via `.env*`). **Never commit real keys** — only `.env.example` (placeholders) is tracked.
 
-<img width="1920" height="1080" alt="Screenshot (209)" src="https://github.com/user-attachments/assets/33c0fba4-183e-423f-a850-04843fdd326f" />
+### Where to find the values
 
+In the Supabase dashboard: **Project Settings → API**.
+- **Project URL** → `SUPABASE_URL`
+- **Project API keys → anon public** → `SUPABASE_KEY`
+- **Project API keys → service_role (secret)** → `SUPABASE_SERVICE_ROLE_KEY`
 
-## Endpoints
+## Authentication
 
-Base URL: `http://localhost:3000`
+Auth is implemented with Supabase JWTs. The flow:
 
-| Method   | Path          | Description                             | Success              | Errors                       |
-|----------|---------------|-----------------------------------------|----------------------|------------------------------|
-| `GET`    | `/tasks`      | List all tasks (`SELECT * FROM tasks`)  | `200` + JSON array   | —                            |
-| `GET`    | `/stats`      | Counts: `{ "total", "done", "open" }`   | `200` + JSON object  | —                            |
-| `POST`   | `/reset`      | Clear and restore the 3 seed tasks      | `200` + JSON array   | —                            |
-| `POST`   | `/tasks`      | Create a task (`{ "title": "string" }`) | `201` + the new task | `400` if title missing/empty |
-| `GET`    | `/tasks/{id}` | Get one task by id                      | `200` + the task     | `404` if not found           |
-| `PUT`    | `/tasks/{id}` | Update title and/or `done`              | `200` + updated task | `400` / `404`                |
-| `DELETE` | `/tasks/{id}` | Delete a task                           | `204` (no body)      | `404` if not found           |
+1. **Sign up / log in** at `POST /auth/signup` or `POST /auth/login` to obtain a JWT access token (and refresh token) from Supabase.
+2. **Send the token** as a Bearer header on protected requests:
 
-### Task shape
+   ```
+   Authorization: Bearer <your-jwt>
+   ```
 
-```json
-{ "id": 1, "title": "Learn what an API is", "done": true }
+3. **Verification** happens server-side: the `withAuth` guard calls `supabase.auth.getUser(token)`, which validates the token against Supabase's Auth server. Expired or tampered tokens are rejected with `401`.
+
+### Protected routes
+
+| Method | Path                   | Auth     | Description                                                                                             |
+|--------|------------------------|----------|---------------------------------------------------------------------------------------------------------|
+| GET    | `/protected/profile`   | required | Returns the authenticated user's safe metadata (`id`, `email`, `created_at`).                           |
+| GET    | `/protected/dashboard` | required | Greets the authenticated user with their `id` and `email`.                                              |
+| POST   | `/auth/logout`         | required | Revokes the session via Supabase (`signOut`), invalidating the refresh token. Returns `204 No Content`. |
+
+### The route guard
+
+`app/lib/authGuard.js` exports `withAuth(handler)`, a wrapper that:
+- extracts the Bearer token from the `Authorization` header,
+- verifies it with Supabase (`getUser`),
+- attaches `request.user` (and `request.tokens`) for the handler,
+- returns `401` with `{ "error": "Access token required" }` or `{ "error": "Invalid or expired token" }` if the token is missing/invalid.
+
+Protected routes use it instead of writing auth code inline:
+
+```js
+import { withAuth } from '../../lib/authGuard.js';
+
+export const GET = withAuth(async (request) => {
+  return Response.json({ user: request.user });
+});
 ```
 
-### Example: create a task
+## Public (unauthenticated) routes
 
-```bash
-curl -i -X POST http://localhost:3000/tasks \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"Try the README example"}'
+| Method | Path           | Description                                                     |
+|--------|----------------|-----------------------------------------------------------------|
+| GET    | `/public/info` | Public welcome message.                                         |
+| GET    | `/tasks`       | List tasks (supports `?done=true\|false` and `?search=<text>`). |
+| POST   | `/tasks`       | Create a task (requires `{ "title": "..." }`).                  |
+| GET    | `/tasks/{id}`  | Get one task.                                                   |
+| PUT    | `/tasks/{id}`  | Update a task's `title` / `done`.                               |
+| DELETE | `/tasks/{id}`  | Delete a task (returns `204`).                                  |
+| GET    | `/stats`       | Task counts (`total`, `done`, `open`).                          |
+| POST   | `/reset`       | Restore seed tasks.                                             |
+
+> Tasks are stored **in memory** and reset on server restart — this keeps the focus on API/auth mechanics rather than persistence.
+
+## API documentation
+
+Swagger UI is served at **[/docs](http://localhost:3000/docs)** and reads the spec from [`openapi.json`](./openapi.json). Protected endpoints are tagged with the `bearerAuth` security scheme (`http` / `bearer` / `JWT`), so you can authorize directly from the Swagger UI "Authorize" button by pasting a Supabase JWT.
+
+The raw spec is also available at `/openapi.json`.
+
+## Scripts
+
+| Script          | Purpose                                              |
+|-----------------|------------------------------------------------------|
+| `npm run dev`   | Start the dev server (Next.js dev mode via Express). |
+| `npm run build` | Production build (`next build`).                     |
+| `npm run start` | Run the production server.                           |
+| `npm run lint`  | Lint with ESLint.                                    |
+
+## Project layout
+
+```
+server.mjs                      Express + Next.js + Swagger bootstrap
+openapi.json                    OpenAPI 3.0.3 spec (served at /docs)
+app/
+  lib/
+    supabaseClient.js           Supabase anon + service-role clients
+    authGuard.js                withAuth middleware (reusable guard)
+  auth/
+    signup/route.js             POST sign-up
+    login/route.js              POST login
+    logout/route.js             POST logout (revokes session)
+  protected/
+    profile/route.js            GET profile (guarded)
+    dashboard/route.js          GET dashboard (guarded)
+  tasks/                        Task CRUD routes (public)
+  public/info/route.js          Public info
+.env.example                    Placeholder env vars (committed)
 ```
 
-```http
-HTTP/1.1 201 Created
-X-Powered-By: Express
-content-type: application/json
-Date: Sat, 25 Jul 2026 12:07:54 GMT
-Connection: keep-alive
-Transfer-Encoding: chunked
+## Security notes
 
-{"id":6,"title":"Try the README example","done":false}
-```
-
-## Swagger UI
-
-<img width="1920" height="801" alt="Screenshot (251)" src="https://github.com/user-attachments/assets/d3e6c340-d6af-488b-aa9f-65c5226b154c" />
-
-All endpoints are documented in `openapi.json` and rendered as interactive
-documentation at `/docs`. Click **Try it out** on any endpoint and hit
-**Execute** — no `curl` needed.
-
-## Explore the database directly
-
-The API is a thin window onto a Postgres table. There is no in-memory copy and
-no "syncing" — the API runs `SELECT * FROM tasks` on every request, so any
-other client sees the exact same rows.
-
-With the compose database running, open a SQL prompt:
-
-```bash
-docker compose exec db psql -U postgres -d tasks
-```
-
-```sql
-SELECT * FROM tasks;
--- the rows the API serves, straight from Postgres
-
-SELECT * FROM tasks WHERE done = true;
--- only the completed tasks
-```
-
-**Try the round-trip:** in `psql`, run `UPDATE tasks SET done = true;` (or
-insert/delete a row), then call `GET /tasks` from the API. The change shows up
-immediately — no server restart — because the server queries the database on
-every request; it never caches the table in memory.
-
-## Persistence, not mortality
-
-Create a few tasks, stop the stack (`docker compose down` without `-v`), restart
-it (`docker compose up`), and `GET /tasks` — the tasks are still there, because
-the `taskdata` volume outlives the container. That's the whole point: the
-repository writes every change to Postgres, so state out-lives the process. Every
-serious backend on Earth is this idea, wearing more clothes.
+- **Never commit `.env`.** It is gitignored; only `.env.example` with placeholder values is tracked.
+- The **service-role key** bypasses all Row Level Security — keep it strictly server-side and never ship it to the client.
+- Logout uses `signOut` with global scope, which revokes the **entire session** (all devices), not just the current token.
+- JWT verification is always performed server-side against Supabase — the API never trusts a locally decoded token.
