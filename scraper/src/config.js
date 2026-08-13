@@ -19,3 +19,6 @@ export const CATALOGUE_PAGE_1_CACHE = "cache/catalogue-page-1.html";
 // Politeness knobs.
 export const REQUEST_TIMEOUT_MS = 8000; // give up after a few seconds
 export const REQUEST_DELAY_MS = 500; // min gap between real requests (Stage 2+)
+
+// Scoped target: the FIRST 3 catalogue pages only (Stage 0 classification).
+export const MAX_CATALOGUE_PAGES = 3;

@@ -6,5 +6,8 @@
   "description": "FlyRank Internship W5 A9 — The polite scraper (JavaScript lane)",
   "scripts": {
     "start": "node src/index.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0"
   }
 }
