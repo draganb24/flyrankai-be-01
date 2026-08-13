@@ -1,8 +1,7 @@
 // FlyRank Internship — Backend Track — Week 5 — Assignment A9
 // Shared constants. Edit REPO_URL before publishing (Stage 6).
 
-// TODO: replace with the real public repo URL once published.
-export const REPO_URL = "https://github.com/<your-username>/<your-repo>";
+export const REPO_URL = "https://github.com/draganb24/flyrankai-be-01";
 
 // Polite, honest User-Agent — a site owner can trace us back to this assignment.
 export const USER_AGENT = `FlyRankInternshipA9/1.0 (+${REPO_URL})`;

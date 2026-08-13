@@ -1,5 +1,5 @@
 // FlyRank Internship — Backend Track — Week 5 — Assignment A9
-// Stage 5 — Survive failures, report the run.
+// Stage 5/6 — Survive failures, report the run. (Publishable entry.)
 // (depends on Stage 1 cache + Stage 2 discovery + Stage 3 extraction +
 //  Stage 4 normalization + schema + report)
 
@@ -9,22 +9,22 @@ import { extractBookRecords } from "./extract.js";
 import { validateRecords } from "./normalize.js";
 import { buildReport } from "./report.js";
 
-// One deliberately broken URL, injected to PROVE the run survives a bad page.
-// It points at a non-existent host so it fails fast locally — we never hammer
-// the real site to test failure.
+// One deliberately broken URL, injected ONLY with --with-bad-page to PROVE the
+// run survives a bad page. It points at a non-existent host so it fails fast
+// locally — we never hammer the real site to test failure. Default run is clean.
 const FAKE_BAD_ENTRY = {
   url: "https://invalid.invalid-local-test/this-page-does-not-exist/index.html",
   sourcePage: "https://books.toscrape.com/catalogue/page-1.html",
 };
 
 async function main() {
+  const withBadPage = process.argv.includes("--with-bad-page");
   const startedAt = new Date();
   console.log("== FlyRank A9 — The Polite Scraper ==");
   console.log("Stage 5: survive failures, report the run\n");
 
   const { cataloguePages, entries } = await discoverBookUrls();
-  // Inject the fake bad page so we exercise the failure path.
-  const allEntries = [...entries, FAKE_BAD_ENTRY];
+  const allEntries = withBadPage ? [...entries, FAKE_BAD_ENTRY] : entries;
 
   const { records: rawRecords, failures, liveFetches, cacheHits } =
     await extractBookRecords(allEntries);
@@ -34,7 +34,11 @@ async function main() {
   await writeFile("output/books.json", JSON.stringify(good, null, 2), "utf8");
   await writeFile(
     "output/errors.json",
-    JSON.stringify([...errors, ...failures.map((f) => ({ product_url: f.url, reason: f.reason }))], null, 2),
+    JSON.stringify(
+      [...errors, ...failures.map((f) => ({ product_url: f.url, reason: f.reason }))],
+      null,
+      2,
+    ),
     "utf8",
   );
 
