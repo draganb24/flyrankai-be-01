@@ -1,1 +1,6 @@
-[]
+[
+  {
+    "product_url": "https://invalid.invalid-local-test/this-page-does-not-exist/index.html",
+    "reason": "fetch failed (status timeout/network): Network error for https://invalid.invalid-local-test/this-page-does-not-exist/index.html: fetch failed"
+  }
+]
