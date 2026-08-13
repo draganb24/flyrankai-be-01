@@ -1,0 +1,10 @@
+{
+  "name": "flyrank-a9-polite-scraper",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "FlyRank Internship W5 A9 — The polite scraper (JavaScript lane)",
+  "scripts": {
+    "start": "node src/index.js"
+  }
+}

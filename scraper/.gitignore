@@ -1,0 +1,8 @@
+# Local cache of fetched HTML — never committed.
+cache/
+
+# Dependencies
+node_modules/
+
+# Optional logs
+*.log
