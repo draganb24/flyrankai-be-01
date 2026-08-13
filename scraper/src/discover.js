@@ -18,14 +18,17 @@ import {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Given the HTML of one catalogue page and its absolute url, return:
-//   { bookUrls: string[], nextPageUrl: string|null }
+//   { bookEntries: [{ url, sourcePage }], nextPageUrl: string|null }
 function parseCataloguePage(html, pageUrl) {
   const $ = load(html);
-  const bookUrls = [];
+  const bookEntries = [];
   // Each product pod's title link points to the book detail page.
   $("article.product_pod h3 a").each((_, el) => {
     const rel = $(el).attr("href");
-    if (rel) bookUrls.push(new URL(rel, pageUrl).href); // absolute, tool-resolved
+    if (rel) {
+      const url = new URL(rel, pageUrl).href; // absolute, tool-resolved
+      bookEntries.push({ url, sourcePage: pageUrl });
+    }
   });
 
   let nextPageUrl = null;
@@ -33,19 +36,22 @@ function parseCataloguePage(html, pageUrl) {
   const nextRel = next.attr("href");
   if (nextRel) nextPageUrl = new URL(nextRel, pageUrl).href; // follow site's own link
 
-  return { bookUrls, nextPageUrl };
+  return { bookEntries, nextPageUrl };
 }
 
-// Returns { cataloguePages, discovered, uniqueUrls, bookUrls }.
+// Returns { cataloguePages, discovered, uniqueUrls, bookUrls, entries }.
 // Caches each catalogue page; only live fetches incur the politeness delay.
 export async function discoverBookUrls(force = false) {
   const seen = new Set();
+  const entries = [];
   const bookUrls = [];
   let cataloguePages = 0;
   let discovered = 0;
   let currentUrl = CATALOGUE_PAGE_1_URL;
+  let prevLive = false;
 
   while (currentUrl && cataloguePages < MAX_CATALOGUE_PAGES) {
+    if (prevLive) await sleep(REQUEST_DELAY_MS); // gap before a live fetch
     const cachePath = `cache/catalogue-${cataloguePages + 1}.html`;
     const { html, fromCache } = await fetchHtml({
       url: currentUrl,
@@ -54,26 +60,20 @@ export async function discoverBookUrls(force = false) {
       timeoutMs: REQUEST_TIMEOUT_MS,
       force,
     });
+    prevLive = !fromCache;
 
-    // Wait between REAL requests only — cached reads never touch the site.
-    if (!fromCache && currentUrl !== CATALOGUE_PAGE_1_URL) {
-      await sleep(REQUEST_DELAY_MS);
-    }
-
-    const { bookUrls: pageBooks, nextPageUrl } = parseCataloguePage(
-      html,
-      currentUrl,
-    );
+    const { bookEntries, nextPageUrl } = parseCataloguePage(html, currentUrl);
     cataloguePages += 1;
-    discovered += pageBooks.length;
-    for (const u of pageBooks) {
-      if (!seen.has(u)) {
-        seen.add(u);
-        bookUrls.push(u);
+    discovered += bookEntries.length;
+    for (const e of bookEntries) {
+      if (!seen.has(e.url)) {
+        seen.add(e.url);
+        entries.push(e);
+        bookUrls.push(e.url);
       }
     }
     currentUrl = nextPageUrl;
   }
 
-  return { cataloguePages, discovered, uniqueUrls: seen.size, bookUrls };
+  return { cataloguePages, discovered, uniqueUrls: seen.size, bookUrls, entries };
 }
