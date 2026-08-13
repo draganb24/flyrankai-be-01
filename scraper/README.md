@@ -62,10 +62,10 @@ so reruns are fast and gentle on the site.
 
 **Outputs** (written to `scraper/output/`):
 
-| file | contents |
-|------|----------|
-| `books.json` | the 60 validated, de-duplicated records |
-| `errors.json` | records/URLs that failed validation or fetching, with a reason |
+| file              | contents                                                                 |
+|-------------------|--------------------------------------------------------------------------|
+| `books.json`      | the 60 validated, de-duplicated records                                  |
+| `errors.json`     | records/URLs that failed validation or fetching, with a reason           |
 | `run-report.json` | honest counts: duration, pages fetched, cache hits, valid/invalid/failed |
 
 **Reproduce the failure-proofing** (Stage 5 checkpoint) without touching the real site:
@@ -81,17 +81,17 @@ node src/index.js --with-bad-page   # injects one fake, non-existent URL
 
 Defined with **Zod** in `src/schema.js` (`.strict()` — no stray fields allowed):
 
-| field | type | required | notes |
-|-------|------|----------|-------|
-| `title` | string | yes | book title |
-| `product_url` | string (https URL) | yes | **canonical identity** — used to de-duplicate |
-| `price_text` | string | yes | raw, e.g. `"£51.77"` |
-| `price_gbp` | number | yes | normalized from `price_text`, sortable/comparable |
-| `availability_text` | string | yes | e.g. `"In stock (22 available)"` |
-| `rating_text` | string | yes | e.g. `"Three"` (from the star-rating class) |
-| `description` | string \| `null` | optional | `null` when the page has none — never invented |
-| `source_page` | string (https URL) | yes | the catalogue page it was found on (provenance) |
-| `fetched_at` | string | yes | ISO timestamp of this run (provenance) |
+| field               | type               | required | notes                                             |
+|---------------------|--------------------|----------|---------------------------------------------------|
+| `title`             | string             | yes      | book title                                        |
+| `product_url`       | string (https URL) | yes      | **canonical identity** — used to de-duplicate     |
+| `price_text`        | string             | yes      | raw, e.g. `"£51.77"`                              |
+| `price_gbp`         | number             | yes      | normalized from `price_text`, sortable/comparable |
+| `availability_text` | string             | yes      | e.g. `"In stock (22 available)"`                  |
+| `rating_text`       | string             | yes      | e.g. `"Three"` (from the star-rating class)       |
+| `description`       | string \| `null`   | optional | `null` when the page has none — never invented    |
+| `source_page`       | string (https URL) | yes      | the catalogue page it was found on (provenance)   |
+| `fetched_at`        | string             | yes      | ISO timestamp of this run (provenance)            |
 
 Validation runs *before* storage: a record that fails is sent to `errors.json` with the
 reason and never reaches `books.json`.
@@ -100,15 +100,15 @@ reason and never reaches `books.json`.
 
 ## Politeness rules
 
-| rule | value | where |
-|------|-------|-------|
-| User-Agent | `FlyRankInternshipA9/1.0 (+https://github.com/draganb24/flyrankai-be-01)` | `src/config.js` → `fetch.js` |
-| Timeout | 8 s per request (abort, never hang) | `src/config.js` → `fetch.js` |
-| Delay | ≥ 500 ms between *real* requests; cached reads skip it | `src/config.js` → `discover.js`/`extract.js` |
-| Cache | every fetched page saved to `cache/`; reruns read it | `src/fetch.js` |
-| Status check | only HTTP 200 is parsed; 404/403 are not retried | `src/fetch.js` |
-| Retry | one retry on transient failure (timeout / 5xx) **only** | `src/fetch.js` |
-| Scope | first 3 catalogue pages, ≤ 60 books | `src/config.js` `MAX_CATALOGUE_PAGES` |
+| rule         | value                                                                     | where                                        |
+|--------------|---------------------------------------------------------------------------|----------------------------------------------|
+| User-Agent   | `FlyRankInternshipA9/1.0 (+https://github.com/draganb24/flyrankai-be-01)` | `src/config.js` → `fetch.js`                 |
+| Timeout      | 8 s per request (abort, never hang)                                       | `src/config.js` → `fetch.js`                 |
+| Delay        | ≥ 500 ms between *real* requests; cached reads skip it                    | `src/config.js` → `discover.js`/`extract.js` |
+| Cache        | every fetched page saved to `cache/`; reruns read it                      | `src/fetch.js`                               |
+| Status check | only HTTP 200 is parsed; 404/403 are not retried                          | `src/fetch.js`                               |
+| Retry        | one retry on transient failure (timeout / 5xx) **only**                   | `src/fetch.js`                               |
+| Scope        | first 3 catalogue pages, ≤ 60 books                                       | `src/config.js` `MAX_CATALOGUE_PAGES`        |
 
 ---
 
