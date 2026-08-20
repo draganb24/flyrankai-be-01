@@ -1,9 +1,17 @@
 import { enrichInputSchema, enrichOutputSchema } from '../../../src/llm/schema.js';
 import { enrich } from '../../../src/llm/enrich.js';
+import { isKillSwitchOn } from '../../../src/llm/runtime.js';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
+  if (isKillSwitchOn()) {
+    return Response.json(
+      { error: 'model offline', detail: 'kill switch is on' },
+      { status: 503 },
+    );
+  }
+
   let body;
   try {
     body = await request.json();
