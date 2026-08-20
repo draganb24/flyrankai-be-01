@@ -1,7 +1,9 @@
 import { enrichOutputSchema } from './schema.js';
-import { callModel, loadPrompt } from './runtime.js';
+import { callModel, loadPrompt, TimeoutError } from './runtime.js';
 import { quarantine } from './quarantine.js';
 import { isStub } from './stub.js';
+
+export { TimeoutError };
 
 const STUB_OUTPUT = {
   category: 'other',
@@ -52,7 +54,11 @@ export async function enrich(input) {
 
   let raw;
   try {
-    raw = await callModel(systemPrompt, input, { temperature: 0 });
+    raw = await callModel(systemPrompt, input, {
+      temperature: 0,
+      role: 'initial',
+      promptVersion: PROMPT_VERSION,
+    });
   } catch (e) {
     attempts.push({ role: 'initial', raw: undefined, error: e.message });
     throw e;
@@ -73,7 +79,7 @@ export async function enrich(input) {
       raw2 = await callModel(
         systemPrompt,
         { ...input, _repair_note: repairPrompt },
-        { temperature: 0 },
+        { temperature: 0, role: 'repair', promptVersion: PROMPT_VERSION },
       );
     } catch (e) {
       attempts.push({ role: 'repair', raw: undefined, error: e.message });

@@ -230,15 +230,30 @@ curl -i -X POST http://localhost:3000/api/enrich \
 
 ### Environment variables (all in `.env.example`)
 
-| Variable          | Meaning                                                     |
-|-------------------|-------------------------------------------------------------|
-| `LLM_BASE_URL`    | OpenAI-compatible base URL (OpenRouter by default).         |
-| `LLM_API_KEY`     | Provider key (OpenRouter). Put the real key in `.env` only. |
-| `LLM_MODEL`       | Model id, e.g. `openrouter/free`.                           |
-| `LLM_MODE`        | `stub` (default, no calls) or `live` (calls the model).     |
-| `LLM_STUB`        | `1` forces stub mode regardless of `LLM_MODE`.              |
-| `LLM_TIMEOUT_MS`  | Hard timeout per model call (Stage 2).                      |
-| `LLM_KILL_SWITCH` | `true` disables the model and returns 503 (Stage 4).        |
+| Variable          | Meaning                                                                                 |
+|-------------------|-----------------------------------------------------------------------------------------|
+| `LLM_BASE_URL`    | OpenAI-compatible base URL (OpenRouter by default).                                     |
+| `LLM_API_KEY`     | Provider key (OpenRouter). Put the real key in `.env` only.                             |
+| `LLM_MODEL`       | Model id, e.g. `openrouter/free`.                                                       |
+| `LLM_MODE`        | `stub` (default, no calls) or `live` (calls the model).                                 |
+| `LLM_STUB`        | `1` forces stub mode regardless of `LLM_MODE`.                                          |
+| `LLM_TIMEOUT_MS`  | Hard timeout per model call. Set to **30000** (Stage 4). SDK default is 10 min.         |
+| `LLM_KILL_SWITCH` | `true` disables the model and returns 503 (Stage 4).                                    |
+| `LLM_ENABLED`     | `false` turns the model off entirely → 503, zero calls (Stage 4 canonical kill switch). |
+
+### Production hardening (Stage 4)
+
+- **Timeout:** the OpenAI client is configured with `timeout: 30000` (30s). A single slow call cannot hold the
+  HTTP connection for the SDK's 10-minute default. On timeout the endpoint returns **504** `model timeout`.
+- **Retries — our own, explicit.** The SDK's built-in auto-retry is turned **OFF** (`maxRetries: 0`) so the retry
+  count is always exactly what our code decides. We retry **only** on timeouts, `429`, and `5xx`, with exponential
+  backoff `1s, 2s, 4s` + up to 250ms jitter, and we obey `Retry-After` when the provider sends it. We **never** retry
+  `400/401/403` — a bad key stays a bad key and would only burn metered free-tier quota. Max 2 retries (3 calls total).
+- **Cost log:** every model call writes one line to `logs/cost-log.jsonl` with `promptVersion`, `model`,
+  `inputTokens`, `outputTokens`, `durationMs`, `role` (`initial`/`repair`), `neededRepair`, and `status`. You cannot
+  manage what you do not measure — this is what answers "what does 10k/day cost?".
+- **Kill switch:** `LLM_ENABLED=false` (or `LLM_KILL_SWITCH=true`, or a `data/kill-switch` file) makes the endpoint
+  skip the model and return a clean **503** with zero calls. Someone who is not you can flip it without a deploy.
 
 ### Observations from the live run (Stage 2)
 

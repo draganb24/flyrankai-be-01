@@ -1,5 +1,5 @@
 import { enrichInputSchema, enrichOutputSchema } from '../../../src/llm/schema.js';
-import { enrich, EnrichError, failCleanly } from '../../../src/llm/enrich.js';
+import { enrich, EnrichError, failCleanly, TimeoutError } from '../../../src/llm/enrich.js';
 import { isKillSwitchOn } from '../../../src/llm/runtime.js';
 
 export const dynamic = 'force-dynamic';
@@ -36,6 +36,12 @@ export async function POST(request) {
   } catch (err) {
     if (err instanceof EnrichError) {
       return failCleanly(parsed.data, err);
+    }
+    if (err instanceof TimeoutError) {
+      return Response.json(
+        { error: 'model timeout', detail: 'the model did not respond within the timeout' },
+        { status: 504 },
+      );
     }
     return Response.json(
       { error: 'model call failed', detail: err?.message ?? 'unknown error' },
