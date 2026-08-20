@@ -1,5 +1,5 @@
 import { enrichInputSchema, enrichOutputSchema } from '../../../src/llm/schema.js';
-import { enrich } from '../../../src/llm/enrich.js';
+import { enrich, EnrichError, failCleanly } from '../../../src/llm/enrich.js';
 import { isKillSwitchOn } from '../../../src/llm/runtime.js';
 
 export const dynamic = 'force-dynamic';
@@ -29,8 +29,17 @@ export async function POST(request) {
     );
   }
 
-  const result = await enrich(parsed.data);
-
-  const output = enrichOutputSchema.parse(result);
-  return Response.json(output, { status: 200 });
+  try {
+    const result = await enrich(parsed.data);
+    const output = enrichOutputSchema.parse(result);
+    return Response.json(output, { status: 200 });
+  } catch (err) {
+    if (err instanceof EnrichError) {
+      return failCleanly(parsed.data, err);
+    }
+    return Response.json(
+      { error: 'model call failed', detail: err?.message ?? 'unknown error' },
+      { status: 502 },
+    );
+  }
 }

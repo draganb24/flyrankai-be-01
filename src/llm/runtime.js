@@ -14,7 +14,23 @@ export function isKillSwitchOn() {
 }
 
 let _client;
+export let __testClient = null;
+export function __setTestClient(c) {
+  __testClient = c;
+}
 export function getClient() {
+  if (__testClient) return __testClient;
+  if (process.env.LLM_STUB_CLIENT === '1') {
+    return {
+      chat: {
+        completions: {
+          create: async () => ({
+            choices: [{ message: { content: process.env.LLM_STUB_CLIENT_OUTPUT ?? '{}' } }],
+          }),
+        },
+      },
+    };
+  }
   if (!_client) {
     _client = new OpenAI({
       baseURL: process.env.LLM_BASE_URL,
@@ -27,6 +43,19 @@ export function getClient() {
 export function loadPrompt(file = 'enrich-v1.md') {
   const p = path.join(ROOT, 'prompts', file);
   return fs.readFileSync(p, 'utf8');
+}
+
+const RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
+export function isRetryable(err) {
+  if (err?.name === 'AbortError' || err?.name === 'TimeoutError') return true;
+  const status =
+    err?.status ??
+    err?.response?.status ??
+    err?.error?.status ??
+    (typeof err?.code === 'number' ? err.code : undefined);
+  if (status && RETRYABLE_STATUS.has(status)) return true;
+  if (/rate.?limit|timeout|try again|server error/i.test(err?.message ?? '')) return true;
+  return false;
 }
 
 const DEFAULT_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS ?? 12000);
