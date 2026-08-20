@@ -182,8 +182,63 @@ app/
     dashboard/route.js          GET dashboard (guarded)
   tasks/                        Task CRUD routes (public)
   public/info/route.js          Public info
+  api/enrich/route.js           POST /api/enrich — LLM enrichment (stub + live)
+src/llm/
+  schema.js                     Zod input + output schemas (closed enum lists)
+  enrich.js                     enrich() — stub now, real call in Stage 2
+  hello.js                      Stage 0 provider proof
+prompts/enrich-v1.md           Versioned prompt (Stage 2)
+evals/cases.json                Hand-labelled eval cases (Stage 5)
+JOB-CARD.md                     The job spec / output contract
 .env.example                    Placeholder env vars (committed)
 ```
+
+## LLM enrichment endpoint (`POST /api/enrich`)
+
+Takes a messy scraped book record and returns a clean, validated enrichment (genre category, one-sentence
+summary, quality flags, confidence, reason). The output shape is fixed — every field is validated against a
+Zod schema before it leaves the server. See `JOB-CARD.md` for the contract.
+
+In **stub mode** (default — `LLM_STUB=1` or `LLM_MODE=stub` in `.env`) the endpoint never calls a model, so
+it costs nothing and always returns a schema-valid object. This is how every stage was built and tested. Flip to
+`LLM_MODE=live` to call the provider (OpenRouter by default).
+
+### Run it
+
+Start the server (stub mode is the default, so no model call happens):
+
+```bash
+npm run dev
+```
+
+### One valid request (200, JSON matching the schema)
+
+```bash
+curl -i -X POST http://localhost:3000/api/enrich \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"The Pragmatic Programmer","author":"Hunt, Andrew","price":"$42.00","description":"Classic book on software craftsmanship and pragmatic engineering practice."}'
+```
+
+### One deliberately broken request (400, names the bad field)
+
+```bash
+# missing required "title" field
+curl -i -X POST http://localhost:3000/api/enrich \
+  -H 'Content-Type: application/json' \
+  -d '{"author":"Hunt, Andrew","price":"$42.00"}'
+```
+
+### Environment variables (all in `.env.example`)
+
+| Variable          | Meaning                                                     |
+|-------------------|-------------------------------------------------------------|
+| `LLM_BASE_URL`    | OpenAI-compatible base URL (OpenRouter by default).         |
+| `LLM_API_KEY`     | Provider key (OpenRouter). Put the real key in `.env` only. |
+| `LLM_MODEL`       | Model id, e.g. `openrouter/free`.                           |
+| `LLM_MODE`        | `stub` (default, no calls) or `live` (calls the model).     |
+| `LLM_STUB`        | `1` forces stub mode regardless of `LLM_MODE`.              |
+| `LLM_TIMEOUT_MS`  | Hard timeout per model call (Stage 2).                      |
+| `LLM_KILL_SWITCH` | `true` disables the model and returns 503 (Stage 4).        |
 
 ## Security notes
 
