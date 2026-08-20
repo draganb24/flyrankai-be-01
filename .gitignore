@@ -10,6 +10,9 @@
 !.yarn/releases
 !.yarn/versions
 
+# runtime logs (cost-log + quarantine) — generated per run, not source
+/logs
+
 # testing
 /coverage
 

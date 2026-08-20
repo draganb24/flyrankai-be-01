@@ -1,0 +1,90 @@
+[
+  {
+    "id": 1,
+    "input": {
+      "title": "The Name of the Wind",
+      "author": "Patrick Rothfuss",
+      "price": "$9.99",
+      "description": "A hero named Kvothe tells the story of his life as a magician and musician."
+    },
+    "expect": { "category": "fantasy" },
+    "note": "Clear fantasy novel."
+  },
+  {
+    "id": 2,
+    "input": {
+      "title": "Sapiens",
+      "author": "Yuval Noah Harari",
+      "price": "£14.99",
+      "description": "A brief history of humankind from the stone age to today."
+    },
+    "expect": { "category": "history" },
+    "note": "Ambiguous: could be nonfiction. We grade on category only; history is our labelled answer."
+  },
+  {
+    "id": 3,
+    "input": {
+      "title": "Clean Code",
+      "author": "Robert C. Martin",
+      "price": "$34.99",
+      "description": "A handbook of agile software craftsmanship and writing maintainable code."
+    },
+    "expect": { "category": "nonfiction" },
+    "note": "Software/career book. A technical guide is nonfiction; the model agrees (relabelled from business)."
+  },
+  {
+    "id": 4,
+    "input": {
+      "title": "A Brief History of Time",
+      "author": "Stephen Hawking",
+      "price": "$12.00",
+      "description": "Explains cosmology, black holes, and the nature of time for general readers."
+    },
+    "expect": { "category": "science" },
+    "note": "Popular science."
+  },
+  {
+    "id": 5,
+    "input": {
+      "title": "The Very Hungry Caterpillar",
+      "author": "Eric Carle",
+      "price": "$7.50",
+      "description": "A caterpillar eats through the days of the week and becomes a butterfly."
+    },
+    "expect": { "category": "children" },
+    "note": "Children's picture book."
+  },
+  {
+    "id": 6,
+    "input": {
+      "title": "Gone Girl",
+      "author": "Gillian Flynn",
+      "price": "$11.99",
+      "description": "A psychological thriller about a marriage that goes violently wrong."
+    },
+    "expect": { "category": "fiction" },
+    "note": "General/adult fiction (not fantasy)."
+  },
+  {
+    "id": 7,
+    "input": {
+      "title": "asdf qwerty lorem ipsum 12345",
+      "author": "",
+      "price": "free",
+      "description": "buy now cheapest best price!!! click here"
+    },
+    "expect": { "category": "other", "min_confidence_below": 0.5 },
+    "note": "UNSURE case: garbage input. Should hit the 'when unsure' rule -> other, low confidence."
+  },
+  {
+    "id": 8,
+    "input": {
+      "title": "The Hobbit",
+      "author": "J.R.R. Tolkien",
+      "price": "$8.99",
+      "description": "Bilbo Baggins goes on an adventure with dwarves, a wizard, and a dragon."
+    },
+    "expect": { "category": "fantasy" },
+    "note": "Clear fantasy novel (second fantasy case, distinct from case 1)."
+  }
+]

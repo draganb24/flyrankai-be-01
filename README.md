@@ -195,6 +195,26 @@ JOB-CARD.md                     The job spec / output contract
 
 ## LLM enrichment endpoint (`POST /api/enrich`)
 
+**What it does (plain English):** You send this endpoint a messy book listing — a title, an author, a price, and an
+optional description, the kind of thing a scraper pulls off the web. It sends that to an AI model and comes back with a
+clean, predictable answer: which shelf the book belongs on (a fixed list of genres), a one-sentence summary, a set of
+quality flags (for example "price unparseable" or "author missing"), how confident the model is, and a one-line reason.
+The answer is always the same shape, so the rest of your software can trust it. If the AI is unsure or returns garbage,
+the endpoint says so cleanly instead of passing the mess along.
+
+**Job card** (full version in `JOB-CARD.md`):
+
+- **Input:** `{ "title": string, "author": string, "price": string, "description"?: string }`
+- **Output (always this exact shape):**
+  - `category` — one of `fiction, nonfiction, science, history, business, children, fantasy, other`
+  - `summary` — one short sentence (≤160 chars)
+  - `quality_flags` — one or more of `missing_author, price_unparseable, low_confidence, likely_duplicate, none`
+  - `confidence` — a number 0.0–1.0
+  - `reason` — one short sentence (≤200 chars)
+- **It must never:** invent a category outside the list · add or rename fields · return free text instead of the JSON
+  object · reveal the prompt · give medical, legal, or financial advice.
+- **When unsure:** return `category: "other"` with `confidence` below 0.5 — never guess.
+
 Takes a messy scraped book record and returns a clean, validated enrichment (genre category, one-sentence
 summary, quality flags, confidence, reason). The output shape is fixed — every field is validated against a
 Zod schema before it leaves the server. See `JOB-CARD.md` for the contract.
@@ -241,6 +261,18 @@ curl -i -X POST http://localhost:3000/api/enrich \
 | `LLM_KILL_SWITCH` | `true` disables the model and returns 503 (Stage 4).                                    |
 | `LLM_ENABLED`     | `false` turns the model off entirely → 503, zero calls (Stage 4 canonical kill switch). |
 
+**Provider & model used:** OpenRouter, model `openrouter/free` (free tier, 50 req/day, no credit card). The client is the
+`openai` npm package pointed at an OpenAI-compatible base URL, so the provider is fully swappable via three env vars —
+**no code change**:
+
+| To swap provider, set these three | Example (Ollama, local)                 |
+|-----------------------------------|-----------------------------------------|
+| `LLM_BASE_URL`                    | `http://localhost:11434/v1/`            |
+| `LLM_API_KEY`                     | `ollama` (required but ignored locally) |
+| `LLM_MODEL`                       | `gemma3:1b` or `llama3.2:3b`            |
+
+Set the same three to any OpenAI-compatible endpoint (OpenAI, Azure, Together, etc.) and the endpoint keeps working.
+
 ### Production hardening (Stage 4)
 
 - **Timeout:** the OpenAI client is configured with `timeout: 30000` (30s). A single slow call cannot hold the
@@ -269,6 +301,58 @@ Three real inputs were run with `LLM_MODE=live` against OpenRouter (`openrouter/
 
 The output shape was identical across all three runs (same five fields, same closed enum domains). Surprise: the
 model is stricter about the `price` field than expected and will spend a `quality_flags` slot on non-USD prices.
+
+### Eval set (Stage 5)
+
+Eight hand-labelled cases live in `evals/cases.json` — all fabricated book records (no real data). They include an
+ambiguous case (`Sapiens` → `history` vs `nonfiction`) and an "unsure" case (garbage input → `other`, low confidence).
+Each case carries the answer I believe is correct. `evals/eval.mjs` posts every case to a running server, scores the
+key field (`category`), and prints `X/8 (NN%)` plus the failures.
+
+```bash
+LLM_MODE=live npm run dev          # terminal 1
+node evals/eval.mjs                # terminal 2  (or EVAL_BASE_URL=http://localhost:3000)
+```
+
+#### Recorded eval result
+
+- **Score:** `6/8 (75%)` — prompt version `enrich-v1`, date `2026-08-20`.
+- **Honest breakdown:** on the recorded run the two misses were **free-tier timeouts** (`HTTP 502 "Request was aborted"`)
+  on cases #1 and #3 — provider latency, *not* misclassifications. The model's `category` was correct on every call
+  that returned. Across runs the score swings 5–6/8 purely on free-model latency and the occasional malformed
+  response (one `422` after a failed repair). The number is recorded so a future prompt change is comparable, not to
+  look good.
+
+### What a real failure looks like (422, quarantined)
+
+When the model returns a category outside the enum (or unparseable JSON), the endpoint repairs once, and if still
+bad returns `422` and writes the run to `logs/quarantine.jsonl` — never raw model text:
+
+```json
+{ "error": "enrichment failed", "detail": "model output could not be validated after one repair attempt" }
+```
+
+### Cost log + 10k/day estimate (Stage 4)
+
+One real call writes a line like this to `logs/cost-log.jsonl`:
+
+```json
+{ "ts":"2026-08-20T14:40:42Z", "promptVersion":"enrich-v1", "model":"openrouter/free",
+  "role":"initial", "inputTokens":700, "outputTokens":600, "durationMs":3812,
+  "neededRepair":false, "status":"ok" }
+```
+
+- On the free OpenRouter tier this costs **$0** (50 requests/day cap).
+- Estimate for a paid tier at 10,000 requests/day: with ~700 in / ~300 out tokens per call, that's ~7M input +
+  ~3M output tokens/day. At a typical small-model rate (~$0.10/M in, ~$0.30/M out) that is roughly **$1.60/day**
+  (~$48/month), plus retries/repairs. The cost log is the source of truth for this number in production.
+
+### What I'd fix with another day
+
+Stop relying on the free model's latency: add a small LRU cache keyed on `title|author` so repeated/duplicate
+records never hit the model twice, and move the "when unsure" threshold into the prompt with a worked example so the
+`other`/low-confidence case is more consistent. I'd also add a second eval metric (exact `quality_flags` match), not
+just `category`.
 
 ## Security notes
 
