@@ -15,7 +15,13 @@ app.get('/health', (_req, res) => {
 
 let seq = 0;
 app.post('/reports', async (req, res) => {
-  const topic = (req.body && req.body.topic) || 'general';
+  const topic = req.body && req.body.topic;
+
+  if (typeof topic !== 'string' || topic.trim() === '') {
+    res.status(400).json({ error: 'topic is required' });
+    return;
+  }
+
   const reportId = `rep_${Date.now()}_${(seq += 1)}`;
 
   db.create(reportId, topic);
