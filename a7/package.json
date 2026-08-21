@@ -11,6 +11,6 @@
   },
   "dependencies": {
     "express": "^5.2.1",
-    "inngest": "^3.45.3"
+    "inngest": "^4.18.1"
   }
 }

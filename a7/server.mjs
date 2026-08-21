@@ -1,18 +1,35 @@
-// FlyRank Internship · W4 · A7
-// Stage 0 — hello server.
-// A background-job system always starts life as a plain request/response API.
-// This file grows across the stages; for now it is just a health endpoint.
-
 import express from 'express';
+import { inngest } from './inngest/client.mjs';
+import { functions } from './inngest/functions.mjs';
+import { db } from './inngest/store.mjs';
+import { serve } from 'inngest/express';
 
 const app = express();
-const port = parseInt(process.env.PORT || '3000', 10);
+const port = parseInt(process.env.A7PORT || '3100', 10);
 
-// GET /health -> { "status": "ok" }
-// Used by Stage 0's checkpoint and by the Inngest dev server's health probe.
+app.use(express.json());
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
+
+let seq = 0;
+app.post('/report', async (req, res) => {
+  const topic = (req.body && req.body.topic) || 'general';
+  const reportId = `rep_${Date.now()}_${(seq += 1)}`;
+
+  db.create(reportId, topic);
+
+  await inngest.send({ name: 'report/requested', data: { reportId, topic } });
+
+  res.status(202).json({
+    reportId,
+    status: 'pending',
+    statusUrl: `/report/${reportId}`,
+  });
+});
+
+app.use('/api/inngest', serve({ client: inngest, functions }));
 
 app.listen(port, () => {
   console.log(`A7 API ready on http://localhost:${port}  (try: GET /health)`);
