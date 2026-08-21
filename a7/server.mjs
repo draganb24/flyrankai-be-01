@@ -14,7 +14,7 @@ app.get('/health', (_req, res) => {
 });
 
 let seq = 0;
-app.post('/report', async (req, res) => {
+app.post('/reports', async (req, res) => {
   const topic = (req.body && req.body.topic) || 'general';
   const reportId = `rep_${Date.now()}_${(seq += 1)}`;
 
@@ -22,11 +22,16 @@ app.post('/report', async (req, res) => {
 
   await inngest.send({ name: 'report/requested', data: { reportId, topic } });
 
-  res.status(202).json({
-    reportId,
-    status: 'pending',
-    statusUrl: `/report/${reportId}`,
-  });
+  res.status(202).json({ id: reportId, status: 'pending' });
+});
+
+app.get('/reports/:id', (req, res) => {
+  const report = db.get(req.params.id);
+  if (!report) {
+    res.status(404).json({ error: 'report not found' });
+    return;
+  }
+  res.json(report);
 });
 
 app.use('/api/inngest', serve({ client: inngest, functions }));
