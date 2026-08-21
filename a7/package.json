@@ -1,0 +1,16 @@
+{
+  "name": "flyrank-a7-background-jobs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "FlyRank Internship W4 A7 — background jobs, status endpoints, retries, and a cron schedule with Inngest.",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "inngest": "npx inngest-cli@latest dev"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "inngest": "^3.45.3"
+  }
+}
