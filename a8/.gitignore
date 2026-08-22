@@ -1,0 +1,7 @@
+# A8 local artifacts — generated, not source
+/reports
+/data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
