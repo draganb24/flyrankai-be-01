@@ -25,6 +25,18 @@ or webhook) — the moment reports get large, generation gets slower, or more th
 users generate concurrently, because a multi-second synchronous request is fragile and holds the
 user (and a server thread) hostage.
 
+## Idempotency (Stage 5)
+`POST /reports` is **idempotent per day**: if a report was already generated today, the endpoint
+returns the existing one with `200` instead of regenerating (a double-click makes one file, not
+two). Pass `{ "force": true }` to force a fresh report.
+
+The same-request-twice check protects against **duplicate side effects from retries, double
+clicks, and flaky networks** — the client may fire the request again, but the system only does the
+work once. A real-world example where a missing check like this costs money: a "charge card" or
+"send invoice" endpoint that isn't idempotent will **bill or email a customer twice** when they
+double-click "Pay" or a timeout triggers a retry — duplicate charges, refunds, and support tickets
+that erode trust and margin.
+
 ## Run it
 
 ```bash

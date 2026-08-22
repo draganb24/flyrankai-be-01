@@ -12,6 +12,7 @@ const dbPath = join(__dirname, 'report.db');
 const reportsDir = join(__dirname, 'reports');
 
 const app = express();
+app.use(express.json()); // parse { "force": true } on POST /reports
 const port = parseInt(process.env.A8_PORT || '3200', 10);
 
 mkdirSync(reportsDir, { recursive: true });
@@ -73,6 +74,16 @@ function buildHtml(report, orders) {
   </body></html>`;
 }
 
+function findToday() {
+  return db
+    .prepare(
+      `SELECT id, path, created_at FROM reports
+       WHERE date(created_at) = date('now') AND path IS NOT NULL
+       ORDER BY created_at DESC LIMIT 1`
+    )
+    .get();
+}
+
 async function generateReport() {
   const report = getReportData();
   const orders = getOrders();
@@ -96,8 +107,16 @@ async function generateReport() {
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-app.post('/reports', async (_req, res) => {
+app.post('/reports', async (req, res) => {
   try {
+    const force = req.body && req.body.force === true;
+    if (!force) {
+      const existing = findToday();
+      if (existing) {
+        return res.status(200).json({ id: existing.id, file: `/reports/${existing.id}/file` });
+      }
+    }
+
     const id = await generateReport();
     res.status(201).json({ id, file: `/reports/${id}/file` });
   } catch (err) {
