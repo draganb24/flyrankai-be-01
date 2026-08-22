@@ -9,13 +9,21 @@ This is the **JavaScript lane**: Node.js + Express + SQLite (`node:sqlite`) + Pl
 
 ## Stages
 - **Stage 0** — setup: `GET /health` + Playwright/Chromium installed. ✅
-- Stage 1 — seed a small SQLite database with data.
-- Stage 2 — one SQL aggregation query.
-- Stage 3 — render the numbers into an HTML page, print to PDF with Playwright.
-- Stage 4 — store the PDF on disk + path in DB; serve it by link.
+- **Stage 1** — seed a small SQLite database with data. ✅
+- **Stage 2** — one SQL aggregation query (`getReportData()`). ✅
+- **Stage 3** — render the numbers into an HTML page, print to PDF with Playwright. ✅
+- **Stage 4** — store the PDF on disk + path in DB; serve it by link. ✅
 - Stage 5 — idempotency: asking twice makes one file, not two.
 - Stage 6 — a clean API surface (order + download by id/link).
 - Stage 7 — README + polish + ≥7 honest commits.
+
+## When would you move this out of the request?
+`POST /reports` runs the whole pipeline **in the request** and takes several seconds (a fresh
+Chromium launch is the dominant cost). That is fine for one user clicking one button. You move it
+out of the request — into a background job (the A7 pattern: enqueue, return 202 + a job id, poll
+or webhook) — the moment reports get large, generation gets slower, or more than a handful of
+users generate concurrently, because a multi-second synchronous request is fragile and holds the
+user (and a server thread) hostage.
 
 ## Run it
 
@@ -23,6 +31,7 @@ This is the **JavaScript lane**: Node.js + Express + SQLite (`node:sqlite`) + Pl
 cd a8
 npm install
 npx playwright install chromium   # one-time browser download
+npm run seed                      # build report.db (200 orders)
 npm start                         # http://localhost:3200
 ```
 
@@ -32,13 +41,27 @@ curl -i http://localhost:3200/health
 # {"status":"ok"}
 ```
 
+### Generate + download a report (Stage 4)
+```bash
+curl -i -X POST http://localhost:3200/reports
+# 201 -> {"id":"<uuid>","file":"/reports/<uuid>/file"}
+
+curl http://localhost:3200/reports/<uuid>          # the row + file link
+curl -o my-report.pdf http://localhost:3200/reports/<uuid>/file   # downloads the PDF
+```
+
 > Port `3200` by default — `3000` is the repo's root Next.js dev server and `3100` is `a7` on this machine.
 > Override with `A8_PORT=xxxx npm start` if you need a different one.
 
 ## Layout
 ```
 a8/
-  server.mjs        Express app (one endpoint per stage)
+  server.mjs        Express app + report pipeline + serve-by-link routes
+  report.mjs        getReportData() / getOrders() — the aggregation layer
+  render.mjs        standalone HTML->PDF renderer (renderReport())
+  seed.mjs          wipes + seeds report.db (safe to run twice)
+  test-report.mjs   prints the report object as JSON (Stage 2 checkpoint)
+  count.mjs         quick row-count helper
   package.json
   data/             SQLite file (gitignored)
   reports/          generated PDFs (gitignored)
