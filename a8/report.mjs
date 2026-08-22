@@ -54,3 +54,18 @@ export function getReportData() {
     db.close();
   }
 }
+
+export function getOrders() {
+  const db = new DatabaseSync(dbPath);
+  try {
+    return db
+      .prepare(
+        `SELECT id, customer, product, amount, created_at
+         FROM orders
+         ORDER BY created_at ASC, id ASC`
+      )
+      .all();
+  } finally {
+    db.close();
+  }
+}

@@ -8,7 +8,8 @@
     "start": "node server.mjs",
     "dev": "node --watch server.mjs",
     "seed": "node seed.mjs",
-    "report": "node test-report.mjs"
+    "report": "node test-report.mjs",
+    "render": "node render.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",
