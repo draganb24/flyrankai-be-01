@@ -11,7 +11,7 @@ const OUT = join(reportsDir, 'test.pdf');
 const money = (n) => `$${Number(n).toFixed(2)}`;
 const today = new Date().toISOString().slice(0, 10);
 
-function buildHtml(report, orders) {
+export function buildHtml(report, orders) {
   const topRows = report.topProducts
     .map(
       (p, i) => `

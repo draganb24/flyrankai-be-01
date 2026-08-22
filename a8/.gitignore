@@ -1,6 +1,9 @@
 # A8 local artifacts — generated, not source
 /node_modules
-/reports
+# ignore generated PDF reports, but keep the folder (page1.png is a committed doc asset)
+/reports/*.pdf
+/reports/*.png
+!/reports/page1.png
 /data
 *.db
 *.db-journal
